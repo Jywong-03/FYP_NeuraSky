@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -185,7 +187,7 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="w-full bg-sky-100 rounded-full h-3">
                     <div 
-                      className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all"
+                      className="bg-linear-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all"
                       style={{ width: `${airline.onTime}%` }}
                     />
                   </div>

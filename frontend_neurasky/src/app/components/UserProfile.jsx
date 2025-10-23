@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -24,7 +26,7 @@ export function UserProfile({ user, onNavigate, onLogout }) {
             <CardContent>
               <div className="flex items-center gap-6 mb-6">
                 <Avatar className="w-24 h-24">
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-3xl">
+                  <AvatarFallback className="bg-linear-to-br from-blue-500 to-cyan-500 text-white text-3xl">
                     {user.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
@@ -47,7 +49,7 @@ export function UserProfile({ user, onNavigate, onLogout }) {
                 </div>
                 <div>
                   <p className="text-sky-600 mb-1">Account Type</p>
-                  <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500">Premium</Badge>
+                  <Badge className="bg-linear-to-r from-blue-500 to-cyan-500">Premium</Badge>
                 </div>
               </div>
             </CardContent>

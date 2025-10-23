@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
@@ -66,7 +68,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-sky-50 to-cyan-50">
       <Toaster />
       
       {currentPage === 'dashboard' && (

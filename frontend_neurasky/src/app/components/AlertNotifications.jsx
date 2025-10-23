@@ -1,11 +1,13 @@
+'use client'
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
-import { ScrollArea } from './ui/scroll-area';
+import { ScrollArea } from './ui/scroll-label';
 import { Bell, X, AlertTriangle, Info, CheckCircle, Clock } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function AlertNotifications({ userType = 'passenger' }) {
   const [alerts, setAlerts] = useState([

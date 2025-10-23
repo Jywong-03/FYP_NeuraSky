@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -7,7 +9,7 @@ import { Label } from './ui/label';
 import { FlightCard } from './FlightCard';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Plus } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function MyFlights({ user, onNavigate, onLogout }) {
   const [myFlights, setMyFlights] = useState([
@@ -78,7 +80,7 @@ export function MyFlights({ user, onNavigate, onLogout }) {
           
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow hover:from-blue-600 hover:to-cyan-600">
+              <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-linear-to-r from-blue-500 to-cyan-500 text-white shadow hover:from-blue-600 hover:to-cyan-600">
                 <Plus className="w-4 h-4" />
                 Add Flight
               </button>
@@ -145,7 +147,7 @@ export function MyFlights({ user, onNavigate, onLogout }) {
                 </div>
                 <Button 
                   onClick={handleAddFlight}
-                  className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                  className="w-full bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
                   Add Flight
                 </Button>
@@ -160,7 +162,7 @@ export function MyFlights({ user, onNavigate, onLogout }) {
               <p className="text-sky-600 mb-4">You haven&apos;t added any flights yet</p>
               <Button 
                 onClick={() => setDialogOpen(true)}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Your First Flight

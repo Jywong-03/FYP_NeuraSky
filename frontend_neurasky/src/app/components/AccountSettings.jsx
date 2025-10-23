@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -7,7 +9,8 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { Bell, Mail, Smartphone } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+
 
 export function AccountSettings({ user, onNavigate, onLogout }) {
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -106,7 +109,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
 
               <Button 
                 onClick={handleSaveNotifications}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
               >
                 Save Preferences
               </Button>
@@ -150,7 +153,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                 </div>
                 <Button 
                   type="submit"
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                  className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
                   Update Password
                 </Button>

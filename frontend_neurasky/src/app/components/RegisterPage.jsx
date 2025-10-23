@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -21,10 +23,10 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-sky-50 to-cyan-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-500 to-cyan-500 rounded-2xl mb-4 shadow-lg">
             <Plane className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-sky-900 mb-2">NeuraSky</h1>
@@ -86,7 +88,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                   className="border-sky-200 focus:border-sky-400"
                 />
               </div>
-              <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
+              <Button type="submit" className="w-full bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
                 Create Account
               </Button>
             </form>
