@@ -1,0 +1,29 @@
+# Web Framework & Server Dependencies
+Flask
+Flask-SQLAlchemy
+Flask-Cors
+python-dotenv
+requests
+Werkzeug
+itsdangerous
+Jinja2
+MarkupSafe
+
+# Database (MySQL)
+SQLAlchemy
+PyMySQL           # Or mysql-connector-python
+
+# Machine Learning & Data Handling
+numpy
+pandas
+scikit-learn
+lightgbm          # Specific ML model library
+joblib
+
+# Utilities
+python-dateutil
+tzdata
+passlib[bcrypt]
+
+# External Services
+twilio

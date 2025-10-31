@@ -125,8 +125,8 @@ export function Dashboard({ user, onNavigate, onLogout }) {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-sky-900 mb-2">Flight Dashboard</h1>
-          <p className="text-sky-700">Real-time flight status powered by AI predictions</p>
+          <h1 className="text-sky-900 mb-2">Flight Information Dashboard</h1>
+          <p className="text-sky-700">Real-time flight status</p>
         </div>
 
         {/* Stats Cards */}
