@@ -11,7 +11,7 @@ MarkupSafe
 
 # Database (MySQL)
 SQLAlchemy
-PyMySQL           # Or mysql-connector-python
+pyodbc            # Driver for MS SQL Server
 
 # Machine Learning & Data Handling
 numpy
