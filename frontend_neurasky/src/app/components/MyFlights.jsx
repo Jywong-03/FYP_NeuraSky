@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'; // Import useEffect
+import React, { useState, useEffect, useCallback } from 'react'; // Import useEffect and useCallback
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -27,33 +27,36 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
     departureTime: '',
   });
 
-  // This function will fetch the user's flights from the backend
-  const fetchMyFlights = useCallback(async () => {
-  if (!authToken) return; // Don't fetch if not logged in
+  // This hook will fetch the user's flights *only* when the page loads
+  useEffect(() => {
+    // Define the async function *inside* the effect
+    const fetchMyFlights = async () => {
+      if (!authToken) return; // Don't fetch if not logged in
 
-  try {
-    const response = await fetch(`${API_URL}/flights/`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+      try {
+        const response = await fetch(`${API_URL}/flights/`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setMyFlights(data); // Set the flights from the API
+        } else {
+          console.error('Failed to fetch flights');
+        }
+      } catch (error) {
+        console.error('Error fetching flights:', error);
       }
-    });
+    };
 
-    if (response.ok) {
-      const data = await response.json();
-      setMyFlights(data); // Set the flights from the API
-    } else {
-      console.error('Failed to fetch flights');
-    }
-  } catch (error) {
-    console.error('Error fetching flights:', error);
-  }
-}, [authToken]);// The [authToken] dependency means it will re-run if the token changes
-
-useEffect(() => {
+    // Call the function
     fetchMyFlights();
-  }, [fetchMyFlights]);
+    
+  }, [authToken]); // This effect now *only* depends on authToken, which is correct.
 
   // This is the updated function to add a flight
   const handleAddFlight = async () => {
@@ -80,8 +83,10 @@ useEffect(() => {
 
       if (response.ok) {
         const addedFlight = await response.json();
-        // Add the new flight to our local state to update the UI
-        setMyFlights([...myFlights, addedFlight]);
+        
+        // **THIS IS THE FIX:**
+        // Instead of re-fetching, we just add the new flight to our state.
+        setMyFlights(currentFlights => [...currentFlights, addedFlight]);
         
         // Reset the form and close the dialog
         setNewFlight({
@@ -207,8 +212,6 @@ useEffect(() => {
         ) : (
           <div className="space-y-4">
             {myFlights.map((flight) => (
-              // Your FlightCard component needs to be updated to match the data
-              // We'll do that next, for now this will show the raw data
               <FlightCard key={flight.id} flight={{
                 id: flight.id,
                 flightNumber: flight.flight_number, // Snake case from API

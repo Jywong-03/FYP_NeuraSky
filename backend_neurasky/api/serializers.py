@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from .models import TrackedFlight
 
 # This serializer is for your RegisterPage.jsx
 class RegisterSerializer(serializers.ModelSerializer):
@@ -27,3 +28,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # These are the fields your frontend needs for the
         # UserProfile.jsx and Navigation.jsx components
         fields = ('id', 'username', 'email', 'first_name')
+
+# In api/serializers.py
+
+class TrackedFlightSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrackedFlight
+        # ONLY list the fields the frontend will send, plus 'id' for the response
+        fields = ('id', 'flight_number', 'airline', 'origin', 'destination', 'departure_time')
