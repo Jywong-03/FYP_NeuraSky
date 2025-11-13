@@ -19,3 +19,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data['first_name']
         )
         return user
+    
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        # These are the fields your frontend needs for the
+        # UserProfile.jsx and Navigation.jsx components
+        fields = ('id', 'username', 'email', 'first_name')

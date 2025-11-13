@@ -12,5 +12,7 @@ class TrackedFlight(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.flight_number}"
+    
+
 
 # You can add your other models here later (like Alert, AccountSettings, etc.)

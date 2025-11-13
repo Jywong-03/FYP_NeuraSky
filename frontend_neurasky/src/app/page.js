@@ -12,39 +12,65 @@ import { DelayReasonsPage } from './components/DelayReasonsPage';
 import { HistoricalTrendsPage } from './components/HistoricalTrendsPage';
 import { Toaster } from './components/ui/sonner';
 
+const API_URL = 'http://127.0.0.1:8000/api';
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [user, setUser] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+
+  const fetchUserProfile = async (token) => {
+    try {
+      const response = await fetch(`${API_URL}/profile/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Send the token
+        },
+      });
+      const userData = await response.json();
+
+      if (response.ok) {
+        // Save the user data to state
+        setUser({
+          id: userData.id,
+          name: userData.first_name, // 'first_name' from your serializer
+          email: userData.email,
+        });
+        setCurrentPage('dashboard');
+      } else {
+        // Handle error, e.g., token expired
+        handleLogout();
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile', error);
+    }
+  };
 
   const handleLogin = async (email, password) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/login/', {
+      const response = await fetch(`${API_URL}/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // Django's login endpoint uses 'username' and 'password'
-        // We agreed to use the email as the username
+        // Django's login uses 'username' and 'password'
+        // We set the username to be the email
         body: JSON.stringify({ username: email, password: password }),
       });
 
       if (!response.ok) {
-        // Handle login failure (e.g., show toast error)
+        // You can add a toast notification here
         console.error('Login failed');
         return;
       }
 
       const data = await response.json();
-      // data.access contains the JWT token. You'll need to save this.
-      console.log('Login successful:', data); 
+      // Save the token
+      setAuthToken(data.access);
 
-      // Mock user for now, we'll fix this next
-      setUser({
-        id: '1',
-        name: 'Alex Johnson', // We'll get this from the token later
-        email: email,
-      });
-      setCurrentPage('dashboard');
+      // Now that we have a token, fetch the user's profile
+      await fetchUserProfile(data.access);
 
     } catch (error) {
       console.error('An error occurred:', error);
@@ -53,30 +79,25 @@ export default function App() {
 
   const handleRegister = async (name, email, password) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/register/', {
+      const response = await fetch(`${API_URL}/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // We set this up in the RegisterSerializer in api/serializers.py
         body: JSON.stringify({
           email: email,
           password: password,
-          first_name: name, // This matches your serializer
+          first_name: name, // Matches your RegisterSerializer
         }),
       });
 
       if (!response.ok) {
-        // Handle register failure
         console.error('Registration failed');
         return;
       }
 
-      const data = await response.json();
-      console.log('Registration successful:', data);
-
       // After registering, automatically log them in
-      handleLogin(email, password);
+      await handleLogin(email, password);
 
     } catch (error) {
       console.error('An error occurred:', error);
@@ -85,6 +106,7 @@ export default function App() {
 
   const handleLogout = () => {
     setUser(null);
+    setAuthToken(null); // Clear the token
     setCurrentPage('login');
   };
 
@@ -129,6 +151,7 @@ export default function App() {
           user={user} 
           onNavigate={setCurrentPage}
           onLogout={handleLogout}
+          authToken={authToken}
         />
       )}
       

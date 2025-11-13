@@ -15,4 +15,6 @@ urlpatterns = [
 
     # /api/login/refresh/ (For refreshing tokens later)
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('profile/', views.UserProfileView.as_view(), name='user-profile')
 ]

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Import useEffect
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -11,23 +11,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function MyFlights({ user, onNavigate, onLogout }) {
-  const [myFlights, setMyFlights] = useState([
-    {
-      id: '1',
-      flightNumber: 'AA1234',
-      airline: 'American Airlines',
-      destination: 'Los Angeles (LAX)',
-      origin: 'New York (JFK)',
-      departureTime: '2025-10-25T14:30:00',
-      arrivalTime: '2025-10-25T17:45:00',
-      status: 'on-time',
-      estimatedDelay: 0,
-      gate: 'B12',
-      terminal: '4'
-    },
-  ]);
+const API_URL = 'http://127.0.0.1:8000/api';
 
+// Accept 'authToken' as a prop
+export function MyFlights({ user, onNavigate, onLogout, authToken }) {
+  // We will now fetch flights instead of using mock data
+  const [myFlights, setMyFlights] = useState([]);
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newFlight, setNewFlight] = useState({
     flightNumber: '',
@@ -37,34 +27,79 @@ export function MyFlights({ user, onNavigate, onLogout }) {
     departureTime: '',
   });
 
-  const handleAddFlight = () => {
+  // This function will fetch the user's flights from the backend
+  const fetchMyFlights = useCallback(async () => {
+  if (!authToken) return; // Don't fetch if not logged in
+
+  try {
+    const response = await fetch(`${API_URL}/flights/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setMyFlights(data); // Set the flights from the API
+    } else {
+      console.error('Failed to fetch flights');
+    }
+  } catch (error) {
+    console.error('Error fetching flights:', error);
+  }
+}, [authToken]);// The [authToken] dependency means it will re-run if the token changes
+
+useEffect(() => {
+    fetchMyFlights();
+  }, [fetchMyFlights]);
+
+  // This is the updated function to add a flight
+  const handleAddFlight = async () => {
     if (!newFlight.flightNumber || !newFlight.airline || !newFlight.destination || !newFlight.origin || !newFlight.departureTime) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    const flight = {
-      id: Date.now().toString(),
-      flightNumber: newFlight.flightNumber,
-      airline: newFlight.airline,
-      destination: newFlight.destination,
-      origin: newFlight.origin,
-      departureTime: newFlight.departureTime,
-      arrivalTime: new Date(new Date(newFlight.departureTime).getTime() + 3 * 60 * 60 * 1000).toISOString(),
-      status: 'on-time',
-      estimatedDelay: 0,
-    };
+    try {
+      const response = await fetch(`${API_URL}/flights/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}` // Send the auth token
+        },
+        body: JSON.stringify({
+          flight_number: newFlight.flightNumber,
+          airline: newFlight.airline,
+          origin: newFlight.origin,
+          destination: newFlight.destination,
+          departure_time: newFlight.departureTime,
+        })
+      });
 
-    setMyFlights([...myFlights, flight]);
-    setNewFlight({
-      flightNumber: '',
-      airline: '',
-      destination: '',
-      origin: '',
-      departureTime: '',
-    });
-    setDialogOpen(false);
-    toast.success('Flight added successfully!');
+      if (response.ok) {
+        const addedFlight = await response.json();
+        // Add the new flight to our local state to update the UI
+        setMyFlights([...myFlights, addedFlight]);
+        
+        // Reset the form and close the dialog
+        setNewFlight({
+          flightNumber: '',
+          airline: '',
+          destination: '',
+          origin: '',
+          departureTime: '',
+        });
+        setDialogOpen(false);
+        toast.success('Flight added successfully!');
+      } else {
+        toast.error('Failed to add flight. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error adding flight:', error);
+      toast.error('An error occurred.');
+    }
   };
 
   return (
@@ -172,7 +207,19 @@ export function MyFlights({ user, onNavigate, onLogout }) {
         ) : (
           <div className="space-y-4">
             {myFlights.map((flight) => (
-              <FlightCard key={flight.id} flight={flight} />
+              // Your FlightCard component needs to be updated to match the data
+              // We'll do that next, for now this will show the raw data
+              <FlightCard key={flight.id} flight={{
+                id: flight.id,
+                flightNumber: flight.flight_number, // Snake case from API
+                airline: flight.airline,
+                destination: flight.destination,
+                origin: flight.origin,
+                departureTime: flight.departure_time, // Snake case from API
+                arrivalTime: new Date(new Date(flight.departure_time).getTime() + 3 * 60 * 60 * 1000).toISOString(),
+                status: 'on-time', // This is still mock data for now
+                estimatedDelay: 0,
+              }} />
             ))}
           </div>
         )}
