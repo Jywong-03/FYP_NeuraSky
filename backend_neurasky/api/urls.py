@@ -18,4 +18,8 @@ urlpatterns = [
 
     path('profile/', views.UserProfileView.as_view(), name='user-profile'),
     path('flights/', views.TrackedFlightView.as_view(), name='tracked-flights'),
+
+    path('flight-status/<str:flight_number>/<str:date>/', 
+         views.FlightStatusView.as_view(), 
+         name='flight-status'),
 ]

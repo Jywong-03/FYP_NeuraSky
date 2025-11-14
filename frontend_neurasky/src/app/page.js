@@ -143,6 +143,7 @@ export default function App() {
           user={user} 
           onNavigate={setCurrentPage}
           onLogout={handleLogout}
+          authToken={authToken}
         />
       )}
       

@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'; // Import useEffect and useCallback
+import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,13 +10,20 @@ import { FlightCard } from './FlightCard';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { Skeleton } from './ui/skeleton'; // Import Skeleton for loading
 
 const API_URL = 'http://127.0.0.1:8000/api';
 
-// Accept 'authToken' as a prop
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
 export function MyFlights({ user, onNavigate, onLogout, authToken }) {
-  // We will now fetch flights instead of using mock data
-  const [myFlights, setMyFlights] = useState([]);
+  const [myFlights, setMyFlights] = useState([]); // List of flights from our DB
+  const [liveFlightData, setLiveFlightData] = useState({}); // Live data from AeroDataBox
+  const [isLoading, setIsLoading] = useState(true); // Page loading state
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newFlight, setNewFlight] = useState({
@@ -27,14 +34,19 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
     departureTime: '',
   });
 
-  // This hook will fetch the user's flights *only* when the page loads
+  // This useEffect fetches all data when the component loads
   useEffect(() => {
-    // Define the async function *inside* the effect
-    const fetchMyFlights = async () => {
-      if (!authToken) return; // Don't fetch if not logged in
-
+    const fetchAllFlightData = async () => {
+      if (!authToken) {
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      
       try {
-        const response = await fetch(`${API_URL}/flights/`, {
+        // 1. Fetch user's tracked flights from our database
+        const flightsResponse = await fetch(`${API_URL}/flights/`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -42,23 +54,61 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
           }
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          setMyFlights(data); // Set the flights from the API
-        } else {
-          console.error('Failed to fetch flights');
+        if (!flightsResponse.ok) {
+          throw new Error('Failed to fetch your tracked flights');
         }
+        
+        const trackedFlights = await flightsResponse.json();
+        setMyFlights(trackedFlights); // Set the base list
+
+        if (trackedFlights.length === 0) {
+          setIsLoading(false);
+          return; // No need to fetch live data if no flights are tracked
+        }
+
+        // 2. Fetch live status for each tracked flight
+        const today = getTodayDate();
+        const liveDataPromises = trackedFlights.map(flight => {
+          // Use the flight number and today's date
+          return fetch(`${API_URL}/flight-status/${flight.flight_number}/${today}/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            }
+          })
+          .then(res => res.ok ? res.json() : null) // Return null if fetch fails for one flight
+          .then(data => ({
+            id: flight.id, // Use our DB ID to map the data
+            data: data 
+          }));
+        });
+
+        const liveDataResults = await Promise.all(liveDataPromises);
+        
+        // Convert the results array into a lookup object
+        // e.g., { "1": { ...live data... }, "2": { ...live data... } }
+        const liveDataMap = liveDataResults.reduce((acc, result) => {
+          if (result.data) {
+            acc[result.id] = result.data;
+          }
+          return acc;
+        }, {});
+
+        setLiveFlightData(liveDataMap);
+
       } catch (error) {
-        console.error('Error fetching flights:', error);
+        console.error('Error fetching flight data:', error);
+        toast.error(error.message || 'Failed to load flight data');
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Call the function
-    fetchMyFlights();
+    fetchAllFlightData();
     
-  }, [authToken]); // This effect now *only* depends on authToken, which is correct.
+  }, [authToken]); // Only re-run all this if the user token changes (login/logout)
 
-  // This is the updated function to add a flight
   const handleAddFlight = async () => {
     if (!newFlight.flightNumber || !newFlight.airline || !newFlight.destination || !newFlight.origin || !newFlight.departureTime) {
       toast.error('Please fill in all fields');
@@ -70,7 +120,7 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}` // Send the auth token
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
           flight_number: newFlight.flightNumber,
@@ -84,10 +134,31 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
       if (response.ok) {
         const addedFlight = await response.json();
         
-        // **THIS IS THE FIX:**
-        // Instead of re-fetching, we just add the new flight to our state.
+        // 1. Add the new flight to our base list
         setMyFlights(currentFlights => [...currentFlights, addedFlight]);
         
+        // 2. Fetch live data for *just* this new flight
+        try {
+          const today = getTodayDate();
+          const liveRes = await fetch(`${API_URL}/flight-status/${addedFlight.flight_number}/${today}/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            }
+          });
+          if (liveRes.ok) {
+            const liveData = await liveRes.json();
+            // 3. Add the new live data to our live data state
+            setLiveFlightData(currentData => ({
+              ...currentData,
+              [addedFlight.id]: liveData
+            }));
+          }
+        } catch (e) {
+          console.error("Failed to fetch live data for new flight", e);
+        }
+
         // Reset the form and close the dialog
         setNewFlight({
           flightNumber: '',
@@ -105,6 +176,83 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
       console.error('Error adding flight:', error);
       toast.error('An error occurred.');
     }
+  };
+
+  // Helper function to merge saved data with live data for the card
+  const createFlightCardProps = (trackedFlight) => {
+    const live = liveFlightData[trackedFlight.id]; // Get live data by DB ID
+    
+    if (!live) {
+      // Return just the tracked data if live data isn't loaded yet
+      return {
+        id: trackedFlight.id,
+        flightNumber: trackedFlight.flight_number,
+        airline: trackedFlight.airline,
+        destination: trackedFlight.destination,
+        origin: trackedFlight.origin,
+        departureTime: trackedFlight.departure_time,
+        status: 'loading', // Show a loading status
+      };
+    }
+
+    // Map API data to FlightCard props
+    return {
+      id: trackedFlight.id,
+      flightNumber: trackedFlight.flight_number, // Use our saved number
+      airline: live.airline.name || trackedFlight.airline,
+      destination: live.arrival.airport.iata || trackedFlight.destination,
+      origin: live.departure.airport.iata || trackedFlight.origin,
+      departureTime: live.departure.scheduledTimeLocal || trackedFlight.departure_time,
+      gate: live.departure.gate,
+      terminal: live.departure.terminal,
+      // Safely format status
+      status: live.status ? live.status.toLowerCase().replace(/ /g, '-') : 'unknown',
+      estimatedDelay: live.departure.delayMinutes || 0,
+      delayReason: null, // API doesn't provide this, but we can add later
+    };
+  };
+
+  // Helper function to decide what to render
+  const renderFlightCards = () => {
+    if (isLoading) {
+      // Show skeleton loaders while fetching
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full rounded-lg" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+      );
+    }
+    
+    if (myFlights.length === 0) {
+      // Show empty state
+      return (
+        <Card className="border-sky-100">
+          <CardContent className="pt-12 pb-12 text-center">
+            <p className="text-sky-600 mb-4">You haven&apos;t added any flights yet</p>
+            <Button 
+              onClick={() => setDialogOpen(true)}
+              className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Flight
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    // Show flight cards
+    return (
+      <div className="space-y-4">
+        {myFlights.map((flight) => (
+          <FlightCard 
+            key={flight.id} 
+            flight={createFlightCardProps(flight)} // Pass the merged data
+          />
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -196,36 +344,9 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
           </Dialog>
         </div>
 
-        {myFlights.length === 0 ? (
-          <Card className="border-sky-100">
-            <CardContent className="pt-12 pb-12 text-center">
-              <p className="text-sky-600 mb-4">You haven&apos;t added any flights yet</p>
-              <Button 
-                onClick={() => setDialogOpen(true)}
-                className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Flight
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {myFlights.map((flight) => (
-              <FlightCard key={flight.id} flight={{
-                id: flight.id,
-                flightNumber: flight.flight_number, // Snake case from API
-                airline: flight.airline,
-                destination: flight.destination,
-                origin: flight.origin,
-                departureTime: flight.departure_time, // Snake case from API
-                arrivalTime: new Date(new Date(flight.departure_time).getTime() + 3 * 60 * 60 * 1000).toISOString(),
-                status: 'on-time', // This is still mock data for now
-                estimatedDelay: 0,
-              }} />
-            ))}
-          </div>
-        )}
+        {/* This function call will render the correct state: loading, empty, or the flight list */}
+        {renderFlightCards()}
+
       </main>
     </div>
   );

@@ -1,111 +1,110 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { FlightCard } from './FlightCard';
 import { DelayAnalytics } from './DelayAnalytics';
 import { Search, TrendingUp, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Skeleton } from './ui/skeleton'; // Import Skeleton for loading
+import { toast } from 'sonner';
 
-// Mock flight data
-const mockFlights = [
-  {
-    id: '1',
-    flightNumber: 'AA1234',
-    airline: 'American Airlines',
-    destination: 'Los Angeles (LAX)',
-    origin: 'New York (JFK)',
-    departureTime: '2025-10-21T14:30:00',
-    arrivalTime: '2025-10-21T17:45:00',
-    status: 'delayed',
-    estimatedDelay: 45,
-    delayReason: 'Weather conditions at departure airport',
-    gate: 'B12',
-    terminal: '4'
-  },
-  {
-    id: '2',
-    flightNumber: 'UA5678',
-    airline: 'United Airlines',
-    destination: 'Chicago (ORD)',
-    origin: 'San Francisco (SFO)',
-    departureTime: '2025-10-21T10:15:00',
-    arrivalTime: '2025-10-21T16:30:00',
-    status: 'on-time',
-    estimatedDelay: 0,
-    gate: 'C5',
-    terminal: '3'
-  },
-  {
-    id: '3',
-    flightNumber: 'DL9012',
-    airline: 'Delta Airlines',
-    destination: 'Miami (MIA)',
-    origin: 'Atlanta (ATL)',
-    departureTime: '2025-10-21T13:00:00',
-    arrivalTime: '2025-10-21T15:20:00',
-    status: 'boarding',
-    estimatedDelay: 0,
-    gate: 'A8',
-    terminal: '2'
-  },
-  {
-    id: '4',
-    flightNumber: 'SW3456',
-    airline: 'Southwest Airlines',
-    destination: 'Las Vegas (LAS)',
-    origin: 'Denver (DEN)',
-    departureTime: '2025-10-21T16:45:00',
-    arrivalTime: '2025-10-21T18:10:00',
-    status: 'delayed',
-    estimatedDelay: 90,
-    delayReason: 'Aircraft maintenance required',
-    gate: 'D3',
-    terminal: '1'
-  },
-  {
-    id: '5',
-    flightNumber: 'BA2345',
-    airline: 'British Airways',
-    destination: 'London (LHR)',
-    origin: 'Boston (BOS)',
-    departureTime: '2025-10-21T19:30:00',
-    arrivalTime: '2025-10-22T07:15:00',
-    status: 'on-time',
-    estimatedDelay: 0,
-    gate: 'E15',
-    terminal: '5'
-  },
-  {
-    id: '6',
-    flightNumber: 'JB7890',
-    airline: 'JetBlue',
-    destination: 'Seattle (SEA)',
-    origin: 'New York (JFK)',
-    departureTime: '2025-10-21T11:20:00',
-    arrivalTime: '2025-10-21T14:40:00',
-    status: 'delayed',
-    estimatedDelay: 30,
-    delayReason: 'Air traffic congestion',
-    gate: 'B7',
-    terminal: '5'
-  }
+const API_URL = 'http://127.0.0.1:8000/api';
+
+// Helper function to get today's date in YYYY-MM-DD format
+function getTodayDate() {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+}
+
+// These are the default flights we'll show on the dashboard.
+// We just need the flight number and date to fetch their status.
+const defaultFlightsToTrack = [
+  { id: '1', flightNumber: 'AA1234', date: getTodayDate() },
+  { id: '2', flightNumber: 'UA5678', date: getTodayDate() },
+  { id: '3', flightNumber: 'DL9012', date: getTodayDate() },
+  { id: '4', flightNumber: 'SW3456', date: getTodayDate() },
+  { id: '5', flightNumber: 'BA2345', date: getTodayDate() },
+  { id: '6', flightNumber: 'JB7890', date: getTodayDate() },
 ];
 
-export function Dashboard({ user, onNavigate, onLogout }) {
+export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredFlights, setFilteredFlights] = useState(mockFlights);
+  
+  // States for live data
+  const [liveFlights, setLiveFlights] = useState([]); // This will hold the full flight data
+  const [filteredFlights, setFilteredFlights] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // This hook will fetch live data for the default flights
+  useEffect(() => {
+    const fetchDashboardFlights = async () => {
+      if (!authToken) {
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+
+      try {
+        // Create an array of fetch promises
+        const flightPromises = defaultFlightsToTrack.map(flight => {
+          return fetch(`${API_URL}/flight-status/${flight.flightNumber}/${flight.date}/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            }
+          })
+          .then(res => res.ok ? res.json() : null); // Return null if a fetch fails
+        });
+
+        // Wait for all fetches to complete
+        const results = await Promise.all(flightPromises);
+        
+        const fetchedFlights = results
+          .filter(data => data) // Filter out any null (failed) results
+          .map((live, index) => {
+            // Map the live API data to our FlightCard format
+            return {
+              id: defaultFlightsToTrack[index].id,
+              flightNumber: live.number,
+              airline: live.airline.name,
+              destination: live.arrival.airport.name || live.arrival.airport.iata,
+              origin: live.departure.airport.name || live.departure.airport.iata,
+              departureTime: live.departure.scheduledTimeLocal,
+              arrivalTime: live.arrival.scheduledTimeLocal,
+              status: live.status ? live.status.toLowerCase().replace(/ /g, '-') : 'unknown',
+              estimatedDelay: live.departure.delayMinutes || 0,
+              delayReason: null, // Not provided by this API endpoint
+              gate: live.departure.gate,
+              terminal: live.departure.terminal
+            };
+          });
+
+        setLiveFlights(fetchedFlights);
+        setFilteredFlights(fetchedFlights);
+
+      } catch (error) {
+        console.error('Error fetching dashboard flights:', error);
+        toast.error('Could not load dashboard flight data.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDashboardFlights();
+  }, [authToken]); // Re-fetch if auth token changes
 
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (!query.trim()) {
-      setFilteredFlights(mockFlights);
+      setFilteredFlights(liveFlights); // Reset to all live flights
       return;
     }
     
-    const filtered = mockFlights.filter(flight => 
+    const filtered = liveFlights.filter(flight => 
       flight.flightNumber.toLowerCase().includes(query.toLowerCase()) ||
       flight.destination.toLowerCase().includes(query.toLowerCase()) ||
       flight.origin.toLowerCase().includes(query.toLowerCase()) ||
@@ -114,10 +113,13 @@ export function Dashboard({ user, onNavigate, onLogout }) {
     setFilteredFlights(filtered);
   };
 
-  const delayedFlights = mockFlights.filter(f => f.status === 'delayed').length;
-  const onTimeFlights = mockFlights.filter(f => f.status === 'on-time').length;
-  const totalFlights = mockFlights.length;
-  const avgDelay = Math.round(mockFlights.reduce((acc, f) => acc + f.estimatedDelay, 0) / mockFlights.length);
+  // Calculate stats from live data
+  const delayedFlights = liveFlights.filter(f => f.status === 'delayed').length;
+  const onTimeFlights = liveFlights.filter(f => f.status === 'on-time').length;
+  const totalFlights = liveFlights.length;
+  const avgDelay = totalFlights > 0 
+    ? Math.round(liveFlights.reduce((acc, f) => acc + f.estimatedDelay, 0) / totalFlights)
+    : 0;
 
   return (
     <div className="min-h-screen">
@@ -187,17 +189,29 @@ export function Dashboard({ user, onNavigate, onLogout }) {
           </CardContent>
         </Card>
 
-        {/* Delay Analytics */}
-        <DelayAnalytics flights={mockFlights} />
+        {/* Delay Analytics - This now receives live data! */}
+        <DelayAnalytics flights={liveFlights} />
 
         {/* Flight List */}
         <div className="mb-8">
           <h2 className="text-sky-900 mb-4">Live Flight Status</h2>
-          <div className="space-y-4">
-            {filteredFlights.map((flight) => (
-              <FlightCard key={flight.id} flight={flight} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-32 w-full rounded-lg" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredFlights.length > 0 ? (
+                filteredFlights.map((flight) => (
+                  <FlightCard key={flight.id} flight={flight} />
+                ))
+              ) : (
+                <p className="text-sky-600 text-center py-4">No live flights could be loaded.</p>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
