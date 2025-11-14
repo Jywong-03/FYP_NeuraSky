@@ -21,12 +21,12 @@ function getTodayDate() {
 // These are the default flights we'll show on the dashboard.
 // We just need the flight number and date to fetch their status.
 const defaultFlightsToTrack = [
-  { id: '1', flightNumber: 'AA1234', date: getTodayDate() },
-  { id: '2', flightNumber: 'UA5678', date: getTodayDate() },
-  { id: '3', flightNumber: 'DL9012', date: getTodayDate() },
-  { id: '4', flightNumber: 'SW3456', date: getTodayDate() },
-  { id: '5', flightNumber: 'BA2345', date: getTodayDate() },
-  { id: '6', flightNumber: 'JB7890', date: getTodayDate() },
+  { id: '1', flightNumber: 'AK6145', date: getTodayDate() },
+  { id: '2', flightNumber: 'AK512', date: getTodayDate() },
+  { id: '3', flightNumber: 'MH2611', date: getTodayDate() },
+  { id: '4', flightNumber: 'CA484', date: getTodayDate() },
+  { id: '5', flightNumber: 'FM866', date: getTodayDate() },
+  { id: '6', flightNumber: 'MU5096', date: getTodayDate() },
 ];
 
 export function Dashboard({ user, onNavigate, onLogout, authToken }) {

@@ -39,7 +39,7 @@ class FlightStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, flight_number, date, *args, **kwargs):
-        url = f"httpsfs://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
+        url = f"https://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
 
         headers = {
             # Get the key safely from your settings
