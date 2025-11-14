@@ -23,9 +23,19 @@ export function FlightCard({ flight, showActions, onRemove }) {
     }
   };
 
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const formatDateTime = (dateObject) => {
+    // Check if it's a valid Date object
+    if (!dateObject || !(dateObject instanceof Date) || isNaN(dateObject.getTime())) {
+      return 'Time not available';
+    }
+    
+    return dateObject.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
   return (
@@ -57,7 +67,7 @@ export function FlightCard({ flight, showActions, onRemove }) {
                   <Clock className="w-4 h-4 text-sky-500" />
                   <span className="text-sky-700">Departure</span>
                 </div>
-                <p className="text-sky-900">{formatTime(flight.departureTime)}</p>
+                <p className="text-sky-900">{formatDateTime(flight.departureTime)}</p>
               </div>
             </div>
 
