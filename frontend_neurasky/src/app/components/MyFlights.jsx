@@ -190,7 +190,11 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
         airline: trackedFlight.airline,
         destination: trackedFlight.destination,
         origin: trackedFlight.origin,
-        departureTime: trackedFlight.departure_time,
+        
+        // [FIXED] Convert the saved datetime-local string to a Date object
+        departureTime: new Date(trackedFlight.departure_time),
+        arrivalTime: null, // We don't have live arrival data yet
+        
         status: 'loading', // Show a loading status
       };
     }
@@ -202,7 +206,12 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
       airline: live.airline.name || trackedFlight.airline,
       destination: live.arrival.airport.iata || trackedFlight.destination,
       origin: live.departure.airport.iata || trackedFlight.origin,
-      departureTime: live.departure.scheduledTimeLocal || trackedFlight.departure_time,
+      
+      // [FIXED] Convert both the live time and the fallback time to Date objects
+      departureTime: new Date(live.departure.scheduledTimeLocal || trackedFlight.departure_time),
+      // [FIXED] Add arrivalTime and convert it to a Date object
+      arrivalTime: new Date(live.arrival.scheduledTimeLocal),
+
       gate: live.departure.gate,
       terminal: live.departure.terminal,
       // Safely format status
