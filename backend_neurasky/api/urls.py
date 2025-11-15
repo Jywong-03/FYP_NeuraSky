@@ -27,4 +27,9 @@ urlpatterns = [
     path('predict/', 
         views.PredictionView.as_view(), 
         name='predict-flight'),
+
+
+    path('analytics/delay-reasons/', views.DelayReasonsView.as_view(), name='delay-reasons'),
+    path('analytics/delay-durations/', views.DelayDurationView.as_view(), name='delay-durations'),
+    path('analytics/historical-trends/', views.HistoricalTrendsView.as_view(), name='historical-trends'),
 ]
