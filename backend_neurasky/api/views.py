@@ -51,15 +51,63 @@ class UserProfileView(generics.RetrieveAPIView):
     
 class TrackedFlightView(generics.ListCreateAPIView):
     serializer_class = TrackedFlightSerializer
-    permission_classes = [permissions.IsAuthenticated] # Only logged-in users can see/add flights
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         # Only return flights that belong to the currently logged-in user
         return TrackedFlight.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Automatically assign the logged-in user when a new flight is created
-        serializer.save(user=self.request.user)
+        # This is where you save the new flight
+        # 'serializer.save()' creates the object in the db
+        # We can get the instance that was just created
+        
+        # 1. Save the basic info from the user (like flight_number, date)
+        #    We add user=self.request.user here
+        tracked_flight = serializer.save(user=self.request.user)
+
+        # 2. NOW, let's get the *real* data for this flight
+        #    (Assuming your serializer gives you flight_number and date)
+        flight_number = tracked_flight.flight_number
+        date = tracked_flight.date.strftime('%Y-%m-%d') # Format date as YYYY-MM-DD
+
+        url = f"https://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
+        headers = {
+            "X-RapidAPI-Key": os.getenv('RAPIDAPI_KEY'),
+            "X-RapidAPI-Host": "aerodatabox.p.rapidapi.com"
+        }
+        querystring = {"withAircraft":"true", "withLocation":"true"}
+
+        try:
+            response = requests.get(url, headers=headers, params=querystring)
+            response.raise_for_status()
+            data = response.json()
+
+            if data and len(data) > 0:
+                flight_data = data[0] # Get first flight result
+                
+                # 3. Update the 'tracked_flight' object with real data
+                tracked_flight.status = flight_data.get('status', 'Unknown')
+                
+                # Get delay info (it might be in different places)
+                delay_minutes = 0
+                if flight_data.get('departure') and flight_data['departure'].get('delay', {}):
+                    delay_minutes = flight_data['departure']['delay'].get('minutes', 0)
+                
+                tracked_flight.estimatedDelay = delay_minutes
+
+                # Save the real departure time
+                if flight_data.get('departure') and flight_data['departure'].get('scheduledTimeLocal'):
+                    tracked_flight.departureTime = flight_data['departure']['scheduledTimeLocal']
+                
+                # 4. Re-save the object to the database with all the new info
+                tracked_flight.save()
+
+        except Exception as e:
+            # Handle error (e.g., flight not found, API down)
+            # For now, we just print it. You can log this later.
+            print(f"Could not fetch live data for {flight_number}: {e}")
+            # The flight is still saved, just without the extra data
 
 class FlightStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
