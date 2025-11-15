@@ -1,49 +1,82 @@
 'use client'
 
-import React, { useState } from 'react';
+// We need to import useState and useEffect
+import React, { useState, useEffect } from 'react'; 
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner'; // For error notifications
+import { Skeleton } from './ui/skeleton'; // For loading state
 
-export function DelayDurationPage({ user, onNavigate, onLogout }) {
-  const [timeRange, setTimeRange] = useState('7days');
+const API_URL = 'http://127.0.0.1:8000/api';
 
-  // Mock data for delay duration distribution
-  const durationData = [
-    { range: '0-15 min', flights: 45, percentage: 28 },
-    { range: '15-30 min', flights: 38, percentage: 24 },
-    { range: '30-60 min', flights: 42, percentage: 26 },
-    { range: '60-90 min', flights: 22, percentage: 14 },
-    { range: '90-120 min', flights: 8, percentage: 5 },
-    { range: '120+ min', flights: 5, percentage: 3 },
-  ];
+// Make sure to get 'authToken' from the props, as defined in page.js
+export function DelayDurationPage({ user, onNavigate, onLogout, authToken }) {
+  const [timeRange, setTimeRange] = useState('all-time');
+  
+  // --- NEW CODE ---
+  // 1. Add state for loading and chart data
+  const [isLoading, setIsLoading] = useState(true);
+  const [durationData, setDurationData] = useState([]);
+  // --- END NEW CODE ---
 
-  // Hourly delay distribution
-  const hourlyData = [
-    { hour: '00:00', avgDelay: 12 },
-    { hour: '03:00', avgDelay: 8 },
-    { hour: '06:00', avgDelay: 22 },
-    { hour: '09:00', avgDelay: 35 },
-    { hour: '12:00', avgDelay: 42 },
-    { hour: '15:00', avgDelay: 48 },
-    { hour: '18:00', avgDelay: 55 },
-    { hour: '21:00', avgDelay: 38 },
-  ];
+  // --- NEW CODE ---
+  // 2. Add useEffect to fetch data from your new API endpoint
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!authToken) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      
+      try {
+        const response = await fetch(`${API_URL}/analytics/delay-durations/`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
 
-  // Airlines comparison
-  const airlineData = [
-    { airline: 'American', avgDelay: 35, onTime: 72 },
-    { airline: 'United', avgDelay: 42, onTime: 68 },
-    { airline: 'Delta', avgDelay: 28, onTime: 78 },
-    { airline: 'Southwest', avgDelay: 31, onTime: 75 },
-    { airline: 'JetBlue', avgDelay: 38, onTime: 70 },
-  ];
+        if (!response.ok) {
+          throw new Error('Failed to fetch duration data');
+        }
+        
+        const data = await response.json();
+        setDurationData(data); // Set the data from your API
+        
+      } catch (error) {
+        toast.error(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const totalDelayedFlights = durationData.reduce((acc, item) => acc + item.flights, 0);
-  const avgDelayDuration = 38; // minutes
+    fetchData();
+  }, [authToken, timeRange]); // Re-fetch if auth token or time range changes
+  // --- END NEW CODE ---
+
+  // ----- MOCK DATA IS NOW GONE -----
+
+  // Calculate stats from the *live data*
+  const totalDelayedFlights = durationData.reduce((acc, item) => {
+    // Don't count "On-Time" as a "delayed" flight
+    if (item.range !== 'On-Time') {
+      return acc + item.flights;
+    }
+    return acc;
+  }, 0);
+  
+  // Find the most common range (ignoring on-time)
+  const mostCommon = durationData.length > 1 
+    ? durationData.filter(d => d.range !== 'On-Time').sort((a, b) => b.flights - a.flights)[0] 
+    : { range: 'N/A', flights: 0 };
+    
+  const totalFlights = durationData.reduce((acc, item) => acc + item.flights, 0);
+  const mostCommonPercent = totalFlights > 0 ? ((mostCommon.flights / totalFlights) * 100).toFixed(0) : 0;
 
   return (
     <div className="min-h-screen">
@@ -53,7 +86,7 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-sky-900 mb-2">Delay Duration Distribution</h1>
-            <p className="text-sky-700">Comprehensive analysis of flight delay patterns</p>
+            <p className="text-sky-700">Analysis of historical flight delay patterns</p>
           </div>
           
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -61,10 +94,8 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="24hours">Last 24 Hours</SelectItem>
-              <SelectItem value="7days">Last 7 Days</SelectItem>
-              <SelectItem value="30days">Last 30 Days</SelectItem>
-              <SelectItem value="90days">Last 90 Days</SelectItem>
+              <SelectItem value="all-time">All Time</SelectItem>
+              {/* You can add more time ranges later if you update your API */}
             </SelectContent>
           </Select>
         </div>
@@ -74,36 +105,36 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
           <Card className="border-sky-100">
             <CardHeader className="pb-2">
               <CardDescription>Total Delayed Flights</CardDescription>
-              <CardTitle className="text-sky-900">{totalDelayedFlights}</CardTitle>
+              <CardTitle className="text-sky-900">{isLoading ? <Skeleton className="h-8 w-24" /> : totalDelayedFlights}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-red-600">
+              <div className="flex items-center gap-2 text-sky-600">
                 <AlertCircle className="w-4 h-4" />
-                <span>+12% from last period</span>
+                <span>Based on historical data</span>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-sky-100">
             <CardHeader className="pb-2">
-              <CardDescription>Average Delay Duration</CardDescription>
-              <CardTitle className="text-sky-900">{avgDelayDuration} min</CardTitle>
+              <CardDescription>Total Flights Analyzed</CardDescription>
+              <CardTitle className="text-sky-900">{isLoading ? <Skeleton className="h-8 w-24" /> : totalFlights}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 text-sky-600">
                 <Clock className="w-4 h-4" />
-                <span>-5 min from last period</span>
+                <span>All recorded flights</span>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-sky-100">
             <CardHeader className="pb-2">
-              <CardDescription>Most Common Range</CardDescription>
-              <CardTitle className="text-sky-900">30-60 min</CardTitle>
+              <CardDescription>Most Common Delay</CardDescription>
+              <CardTitle className="text-sky-900">{isLoading ? <Skeleton className="h-8 w-32" /> : mostCommon.range}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge className="bg-sky-100 text-sky-800 border-sky-200">26% of delays</Badge>
+              <Badge className="bg-sky-100 text-sky-800 border-sky-200">{mostCommonPercent}% of delays</Badge>
             </CardContent>
           </Card>
         </div>
@@ -115,8 +146,16 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
             <CardDescription>Distribution of delays across time ranges</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* --- NEW CODE --- */}
+            {/* 3. Add loading skeleton */}
+            {isLoading ? (
+              <div className="w-full h-[400px] flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ) : (
+            // 4. Pass the *live data* to the chart
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={durationData}>
+              <BarChart data={durationData}> {/* This now uses your state variable */}
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
                 <XAxis dataKey="range" stroke="#0c4a6e" />
                 <YAxis stroke="#0c4a6e" />
@@ -131,71 +170,13 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
                 <Bar dataKey="flights" fill="#06b6d4" name="Number of Flights" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
+            {/* --- END NEW CODE --- */}
           </CardContent>
         </Card>
-
-        {/* Hourly Delay Pattern */}
-        <Card className="border-sky-100 mb-8">
-          <CardHeader>
-            <CardTitle className="text-sky-900">Hourly Delay Pattern</CardTitle>
-            <CardDescription>Average delay duration by time of day</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={hourlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-                <XAxis dataKey="hour" stroke="#0c4a6e" />
-                <YAxis stroke="#0c4a6e" label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #bae6fd',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="avgDelay" 
-                  stroke="#0ea5e9" 
-                  strokeWidth={3}
-                  name="Avg Delay (min)"
-                  dot={{ fill: '#06b6d4', r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Airlines Comparison */}
-        <Card className="border-sky-100">
-          <CardHeader>
-            <CardTitle className="text-sky-900">Airline Performance Comparison</CardTitle>
-            <CardDescription>Average delay and on-time performance by airline</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {airlineData.map((airline) => (
-                <div key={airline.airline} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sky-900">{airline.airline} Airlines</span>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sky-600">Avg Delay: <span className="text-sky-900">{airline.avgDelay} min</span></span>
-                      <Badge className="bg-green-100 text-green-800 border-green-200">
-                        {airline.onTime}% On-Time
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="w-full bg-sky-100 rounded-full h-3">
-                    <div 
-                      className="bg-linear-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all"
-                      style={{ width: `${airline.onTime}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        
+        {/* Other charts are removed for simplicity, you can add them back later */}
+        
       </main>
     </div>
   );

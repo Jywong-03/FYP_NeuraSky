@@ -6,44 +6,47 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 // Mock flight data
 export function DelayAnalytics({ flights }) {
-  // Analyze delay reasons
-  const delayReasons = flights.reduce((acc, flight) => {
-    if (flight.delayReason) {
-      const reason = flight.delayReason;
-      if (!acc[reason]) {
-        acc[reason] = 0;
-      }
-      acc[reason]++;
-    }
-    return acc;
-  }, {});
+// Analyze flight statuses (replaces delayReasons)
+const statusCounts = flights.reduce((acc, flight) => {
+  // Use the 'status' field from the prop
+  const status = flight.status ? flight.status.replace('-', ' ') : 'unknown';
 
-  const reasonData = Object.entries(delayReasons).map(([name, value]) => ({
-    name: name.length > 30 ? name.substring(0, 30) + '...' : name,
-    value
-  }));
+  // Capitalize the first letter for display
+  const cleanStatus = status.charAt(0).toUpperCase() + status.slice(1);
 
-  // Delay duration distribution
-  const delayDurations = [
-    { range: '0-15 min', count: 0 },
-    { range: '15-30 min', count: 0 },
-    { range: '30-60 min', count: 0 },
-    { range: '60+ min', count: 0 },
-  ];
+  if (!acc[cleanStatus]) {
+    acc[cleanStatus] = 0;
+  }
+  acc[cleanStatus]++;
+  return acc;
+}, {});
 
-  flights.forEach(flight => {
-    if (flight.estimatedDelay === 0) {
-      // Skip on-time flights
-    } else if (flight.estimatedDelay <= 15) {
-      delayDurations[0].count++;
-    } else if (flight.estimatedDelay <= 30) {
-      delayDurations[1].count++;
-    } else if (flight.estimatedDelay <= 60) {
-      delayDurations[2].count++;
-    } else {
-      delayDurations[3].count++;
-    }
-  });
+const reasonData = Object.entries(statusCounts).map(([name, value]) => ({
+  name,
+  value
+}));
+
+// Delay duration distribution
+const delayDurations = [
+  { range: 'On-Time', count: 0 }, // We'll show on-time flights as their own category
+  { range: '1-30 min', count: 0 },
+  { range: '30-60 min', count: 0 },
+  { range: '60+ min', count: 0 },
+];
+
+flights.forEach(flight => {
+  const delay = flight.estimatedDelay || 0;
+
+  if (delay <= 0) {
+    delayDurations[0].count++; // On-Time
+  } else if (delay <= 30) {
+    delayDurations[1].count++;
+  } else if (delay <= 60) {
+    delayDurations[2].count++;
+  } else {
+    delayDurations[3].count++;
+  }
+});
 
   const COLORS = ['#3b82f6', '#06b6d4', '#0ea5e9', '#0284c7'];
 
@@ -75,8 +78,8 @@ export function DelayAnalytics({ flights }) {
 
       <Card className="border-sky-100">
         <CardHeader>
-          <CardTitle className="text-sky-900">Delay Reasons</CardTitle>
-          <CardDescription>Primary causes of flight delays</CardDescription>
+          <CardTitle className="text-sky-900">Flight Status Breakdown</CardTitle>
+          <CardDescription>Live status of your tracked flights</CardDescription>
         </CardHeader>
         <CardContent>
           {reasonData.length > 0 ? (

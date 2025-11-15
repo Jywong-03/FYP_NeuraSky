@@ -22,11 +22,11 @@ function getTodayDate() {
 // We just need the flight number and date to fetch their status.
 const defaultFlightsToTrack = [
   { id: '1', flightNumber: 'AK6145', date: getTodayDate() },
-  { id: '2', flightNumber: 'AK512', date: getTodayDate() },
-  { id: '3', flightNumber: 'MH2611', date: getTodayDate() },
-  { id: '4', flightNumber: 'CA484', date: getTodayDate() },
-  { id: '5', flightNumber: 'FM866', date: getTodayDate() },
-  { id: '6', flightNumber: 'MU5096', date: getTodayDate() },
+  // { id: '2', flightNumber: 'AK512', date: getTodayDate() },
+  // { id: '3', flightNumber: 'MH2611', date: getTodayDate() },
+  // { id: '4', flightNumber: 'CA484', date: getTodayDate() },
+  // { id: '5', flightNumber: 'FM866', date: getTodayDate() },
+  // { id: '6', flightNumber: 'MU5096', date: getTodayDate() },
 ];
 
 export function Dashboard({ user, onNavigate, onLogout, authToken }) {
@@ -39,77 +39,96 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
 
   // This hook will fetch live data for the default flights
   useEffect(() => {
-    const fetchDashboardFlights = async () => {
-      if (!authToken) {
-        setIsLoading(false);
-        return;
+  const fetchDashboardFlights = async () => {
+    if (!authToken) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const fetchedFlightsData = []; // This will hold the full flight data
+
+    try {
+      // 1. Fetch user's tracked flights from our database
+      const flightsResponse = await fetch(`${API_URL}/flights/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (!flightsResponse.ok) {
+        throw new Error('Failed to fetch your tracked flights');
       }
-      
-      setIsLoading(true);
 
-      // This array will hold the results
-      const fetchedFlightsData = [];
+      const trackedFlights = await flightsResponse.json();
 
-      try {
-        // Use a for...of loop to fetch one by one (sequentially)
-        for (const flight of defaultFlightsToTrack) {
-          try {
-            const res = await fetch(`${API_URL}/flight-status/${flight.flightNumber}/${flight.date}/`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-              }
-            });
+      if (trackedFlights.length === 0) {
+        setIsLoading(false);
+        setLiveFlights([]); // Set empty array
+        setFilteredFlights([]); // Set empty array
+        return; // No need to fetch live data if no flights are tracked
+      }
 
-            if (res.ok) {
-              const liveData = await res.json();
-              // Map the live API data to our FlightCard format
-              fetchedFlightsData.push({
-                id: flight.id,
-                flightNumber: liveData.number,
-                airline: liveData.airline.name,
-                destination: liveData.arrival.airport.name || liveData.arrival.airport.iata,
-                origin: liveData.departure.airport.name || liveData.departure.airport.iata,
-                
-                departureTime: new Date(liveData.departure.scheduledTimeLocal),
-                arrivalTime: new Date(liveData.arrival.scheduledTimeLocal),
+      // 2. Fetch live status for each tracked flight SEQUENTIALLY
+      const today = getTodayDate();
 
-                status: liveData.status ? liveData.status.toLowerCase().replace(/ /g, '-') : 'unknown',
-                estimatedDelay: liveData.departure.delayMinutes || 0,
-                delayReason: null, // Not provided by this API endpoint
-                gate: liveData.departure.gate,
-                terminal: liveData.departure.terminal
-              });
-            } else {
-              // Log an error for a single failed flight but don't stop the loop
-              console.error(`Failed to fetch data for ${flight.flightNumber}: ${res.statusText}`);
+      for (const flight of trackedFlights) {
+        try {
+          const res = await fetch(`${API_URL}/flight-status/${flight.flight_number}/${today}/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
             }
-          } catch (e) {
-            console.error(`Error fetching ${flight.flightNumber}:`, e);
+          });
+
+          if (res.ok) {
+            const liveData = await res.json();
+            // Map the live API data to our FlightCard format
+            fetchedFlightsData.push({
+              id: flight.id, // Use the database ID
+              flightNumber: liveData.number,
+              airline: liveData.airline.name,
+              destination: liveData.arrival.airport.name || liveData.arrival.airport.iata,
+              origin: liveData.departure.airport.name || liveData.departure.airport.iata,
+
+              departureTime: new Date(liveData.departure.scheduledTimeLocal),
+              arrivalTime: new Date(liveData.arrival.scheduledTimeLocal),
+
+              status: liveData.status ? liveData.status.toLowerCase().replace(/ /g, '-') : 'unknown',
+              estimatedDelay: liveData.departure.delayMinutes || 0,
+              delayReason: null, // API doesn't provide this
+              gate: liveData.departure.gate,
+              terminal: liveData.departure.terminal
+            });
+          } else {
+            console.error(`Failed to fetch live data for ${flight.flight_number}: ${res.statusText}`);
           }
-          
-          // --- THIS IS THE CRITICAL FIX ---
-          // Wait for 1.5 seconds (1500ms) before making the next API call
-          // This will respect the free plan's rate limit
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          // --- END OF FIX ---
+        } catch (e) {
+          console.error(`Error fetching ${flight.flight_number}:`, e);
         }
 
-        setLiveFlights(fetchedFlightsData);
-        setFilteredFlights(fetchedFlightsData);
-
-      } catch (error) {
-        // This will catch errors if the whole function fails
-        console.error('Error fetching dashboard flights:', error);
-        toast.error('Could not load dashboard flight data.');
-      } finally {
-        setIsLoading(false);
+        // --- THIS IS THE CRITICAL FIX ---
+        // Wait for 1.5 seconds (1500ms) before making the next API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // --- END OF FIX ---
       }
-    };
-    
-    fetchDashboardFlights();
-  }, [authToken]); // Re-fetch if auth token changes
+
+      setLiveFlights(fetchedFlightsData);
+      setFilteredFlights(fetchedFlightsData);
+
+    } catch (error) {
+      console.error('Error fetching dashboard flights:', error);
+      toast.error(error.message || 'Could not load dashboard flight data.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchDashboardFlights();
+}, [authToken]); // Re-fetch if auth token changes
 
 
   const handleSearch = (query) => {

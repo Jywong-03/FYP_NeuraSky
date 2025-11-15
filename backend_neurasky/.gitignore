@@ -1,6 +1,6 @@
 # Ignore environment variables
-.env
-.env.*
+backend_neurasky/.env
+
 
 # Ignore Python cache
 __pycache__/
@@ -8,3 +8,6 @@ __pycache__/
 
 # Ignore database files (if you use SQLite for testing)
 *.sqlite3
+
+dataset/
+venv/

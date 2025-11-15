@@ -22,4 +22,9 @@ urlpatterns = [
     path('flight-status/<str:flight_number>/<str:date>/', 
          views.FlightStatusView.as_view(), 
          name='flight-status'),
+
+    # ML Prediction Endpoint
+    path('predict/', 
+        views.PredictionView.as_view(), 
+        name='predict-flight'),
 ]

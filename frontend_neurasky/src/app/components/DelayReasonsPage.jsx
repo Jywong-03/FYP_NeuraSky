@@ -1,50 +1,77 @@
 'use client'
 
-import React, { useState } from 'react';
+// We need to import useState and useEffect
+import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Cloud, Wrench, Users, Plane, AlertTriangle, Wind } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Cloud, Wrench, Users, Plane, AlertTriangle, Wind, CheckCircle, Clock } from 'lucide-react'; // Added icons
+import { toast } from 'sonner'; // For error notifications
+import { Skeleton } from './ui/skeleton'; // For loading state
 
-export function DelayReasonsPage({ user, onNavigate, onLogout }) {
-  const [timeRange, setTimeRange] = useState('7days');
+const API_URL = 'http://127.0.0.1:8000/api';
 
-  // Delay reasons data
-  const reasonsData = [
-    { name: 'Weather Conditions', value: 38, icon: Cloud, color: '#3b82f6' },
-    { name: 'Aircraft Maintenance', value: 22, icon: Wrench, color: '#06b6d4' },
-    { name: 'Air Traffic Congestion', value: 18, icon: Plane, color: '#0ea5e9' },
-    { name: 'Crew Availability', value: 12, icon: Users, color: '#0284c7' },
-    { name: 'Security Issues', value: 6, icon: AlertTriangle, color: '#0c4a6e' },
-    { name: 'Other Reasons', value: 4, icon: Wind, color: '#7dd3fc' },
-  ];
+// Map statuses from your backend to icons and colors
+const REASON_DETAILS = {
+  'Delayed': { icon: AlertTriangle, color: '#ef4444' },
+  'On-Time': { icon: CheckCircle, color: '#22c55e' },
+  'Cancelled': { icon: Wrench, color: '#64748b' },
+  'Diverted': { icon: Plane, color: '#eab308' },
+  'Scheduled': { icon: Clock, color: '#3b82f6' },
+  'Unknown': { icon: Wind, color: '#a1a1aa' }
+};
 
-  // Weather subcategories
-  const weatherData = [
-    { type: 'Thunderstorms', count: 45, severity: 'High' },
-    { type: 'Heavy Rain', count: 32, severity: 'Medium' },
-    { type: 'Fog', count: 28, severity: 'Medium' },
-    { type: 'Snow/Ice', count: 24, severity: 'High' },
-    { type: 'Strong Winds', count: 18, severity: 'Medium' },
-    { type: 'Low Visibility', count: 15, severity: 'Low' },
-  ];
+// Make sure to get 'authToken' from the props
+export function DelayReasonsPage({ user, onNavigate, onLogout, authToken }) {
+  const [timeRange, setTimeRange] = useState('all-time');
+  
+  // --- NEW CODE ---
+  const [isLoading, setIsLoading] = useState(true);
+  const [reasonsData, setReasonsData] = useState([]);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!authToken) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      
+      try {
+        const response = await fetch(`${API_URL}/analytics/delay-reasons/`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch reasons data');
+        }
+        const data = await response.json();
+        
+        // Add icons and colors to the data from your API
+        const formattedData = data.map(item => ({
+          ...item,
+          ...REASON_DETAILS[item.name] || REASON_DETAILS['Unknown']
+        }));
+        
+        setReasonsData(formattedData);
+        
+      } catch (error) {
+        toast.error(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Monthly reason trends
-  const monthlyTrends = [
-    { month: 'Apr', weather: 25, maintenance: 15, traffic: 12, crew: 8 },
-    { month: 'May', weather: 32, maintenance: 18, traffic: 15, crew: 10 },
-    { month: 'Jun', weather: 42, maintenance: 20, traffic: 22, crew: 12 },
-    { month: 'Jul', weather: 48, maintenance: 16, traffic: 28, crew: 14 },
-    { month: 'Aug', weather: 45, maintenance: 19, traffic: 25, crew: 11 },
-    { month: 'Sep', weather: 38, maintenance: 22, traffic: 20, crew: 13 },
-    { month: 'Oct', weather: 30, maintenance: 18, traffic: 18, crew: 9 },
-  ];
+    fetchData();
+  }, [authToken, timeRange]);
+  // --- END NEW CODE ---
 
-  const COLORS = ['#3b82f6', '#06b6d4', '#0ea5e9', '#0284c7', '#0c4a6e', '#7dd3fc'];
+  // ----- MOCK DATA IS NOW GONE -----
 
-  const totalDelays = reasonsData.reduce((acc, item) => acc + item.value, 0);
+  const totalFlights = reasonsData.reduce((acc, item) => acc + item.value, 0);
 
   return (
     <div className="min-h-screen">
@@ -53,8 +80,8 @@ export function DelayReasonsPage({ user, onNavigate, onLogout }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-sky-900 mb-2">Delay Reasons Analysis</h1>
-            <p className="text-sky-700">Detailed breakdown of delay causes and patterns</p>
+            <h1 className="text-sky-900 mb-2">Historical Status Analysis</h1>
+            <p className="text-sky-700">Detailed breakdown of all recorded flight statuses</p>
           </div>
           
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -62,153 +89,99 @@ export function DelayReasonsPage({ user, onNavigate, onLogout }) {
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="24hours">Last 24 Hours</SelectItem>
-              <SelectItem value="7days">Last 7 Days</SelectItem>
-              <SelectItem value="30days">Last 30 Days</SelectItem>
-              <SelectItem value="90days">Last 90 Days</SelectItem>
+              <SelectItem value="all-time">All Time</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Reason Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {reasonsData.map((reason) => {
-            const Icon = reason.icon;
-            const percentage = ((reason.value / totalDelays) * 100).toFixed(1);
-            
-            return (
-              <Card key={reason.name} className="border-sky-100">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div 
-                      className="p-2 rounded-lg"
-                      style={{ backgroundColor: `${reason.color}15` }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: reason.color }} />
+          {isLoading ? (
+            // Show Skeletons while loading
+            <>
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </>
+          ) : (
+            reasonsData.map((reason) => {
+              const Icon = reason.icon;
+              const percentage = totalFlights > 0 ? ((reason.value / totalFlights) * 100).toFixed(1) : 0;
+              
+              return (
+                <Card key={reason.name} className="border-sky-100">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ backgroundColor: `${reason.color}15` }} // Faded background
+                      >
+                        <Icon className="w-5 h-5" style={{ color: reason.color }} />
+                      </div>
+                      <CardDescription>{reason.name}</CardDescription>
                     </div>
-                    <CardDescription>{reason.name}</CardDescription>
-                  </div>
-                  <CardTitle className="text-sky-900">{reason.value}%</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="w-full bg-sky-100 rounded-full h-2">
-                    <div 
-                      className="h-2 rounded-full transition-all"
-                      style={{ 
-                        width: `${percentage}%`,
-                        backgroundColor: reason.color
-                      }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                    <CardTitle className="text-sky-900">{reason.value} Flights</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="w-full bg-sky-100 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full transition-all"
+                        style={{ 
+                          width: `${percentage}%`,
+                          backgroundColor: reason.color
+                        }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 gap-8 mb-8">
           {/* Pie Chart */}
           <Card className="border-sky-100">
             <CardHeader>
-              <CardTitle className="text-sky-900">Delay Reasons Distribution</CardTitle>
-              <CardDescription>Percentage breakdown of delay causes</CardDescription>
+              <CardTitle className="text-sky-900">Status Distribution</CardTitle>
+              <CardDescription>Percentage breakdown of all recorded flights</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <PieChart>
-                  <Pie
-                    data={reasonsData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {reasonsData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
-                      border: '1px solid #bae6fd',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Weather Details */}
-          <Card className="border-sky-100">
-            <CardHeader>
-              <CardTitle className="text-sky-900">Weather-Related Delays</CardTitle>
-              <CardDescription>Breakdown by weather type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {weatherData.map((weather) => {
-                  const severityColor = weather.severity === 'High' ? 'red' : weather.severity === 'Medium' ? 'yellow' : 'green';
-                  
-                  return (
-                    <div key={weather.type} className="flex items-center justify-between p-3 bg-sky-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Cloud className="w-5 h-5 text-sky-600" />
-                        <div>
-                          <p className="text-sky-900">{weather.type}</p>
-                          <p className="text-sky-600">{weather.count} incidents</p>
-                        </div>
-                      </div>
-                      <Badge 
-                        className={
-                          severityColor === 'red' 
-                            ? 'bg-red-100 text-red-800 border-red-200'
-                            : severityColor === 'yellow'
-                            ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                            : 'bg-green-100 text-green-800 border-green-200'
-                        }
-                      >
-                        {weather.severity}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
+              {isLoading ? (
+                <div className="w-full h-[350px] flex items-center justify-center">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
+                  <PieChart>
+                    <Pie
+                      data={reasonsData} // Use live data
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={120}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {reasonsData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #bae6fd',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
-
-        {/* Monthly Trends */}
-        <Card className="border-sky-100">
-          <CardHeader>
-            <CardTitle className="text-sky-900">Monthly Delay Reason Trends</CardTitle>
-            <CardDescription>Tracking delay causes over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={monthlyTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-                <XAxis dataKey="month" stroke="#0c4a6e" />
-                <YAxis stroke="#0c4a6e" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #bae6fd',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="weather" stackId="a" fill="#3b82f6" name="Weather" />
-                <Bar dataKey="maintenance" stackId="a" fill="#06b6d4" name="Maintenance" />
-                <Bar dataKey="traffic" stackId="a" fill="#0ea5e9" name="Air Traffic" />
-                <Bar dataKey="crew" stackId="a" fill="#0284c7" name="Crew Issues" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
