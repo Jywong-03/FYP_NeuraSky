@@ -44,9 +44,9 @@ class UserProfileSettingsView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        # This view returns the 'UserProfile' object linked to the request.user
-        # The 'profile' related_name comes from our UserProfile model
-        return self.request.user.profile
+        # This view now GETS or CREATES the profile
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
     
 # --- NEW VIEW FOR DELETING A USER ---
 class DeleteUserView(APIView):
@@ -354,30 +354,25 @@ def user_profile_view(request):
 @permission_classes([IsAuthenticated])
 def flight_stats_view(request):
     user = request.user
-    
-    # --- IMPORTANT ---
-    # You MUST adjust these queries to match your FlightHistory model's fields.
-    # I am guessing your field names based on the component.
-    
-    # 1. Total flights tracked (e.g., all past flights)
-    # I'm guessing 'departure_time' and checking if it's in the past.
-    flights_tracked = FlightHistory.objects.filter(
+    now = timezone.now() # Get the current time once
+
+    # --- FIX 1: Query TrackedFlight, not FlightHistory ---
+    # 1. Total flights tracked (past flights)
+    flights_tracked = TrackedFlight.objects.filter(
         user=user,
-        departure_time__lt=timezone.now() 
+        departureTime__lt=now  # --- FIX 2: Use 'departureTime' field ---
     ).count()
     
-    # 2. Delay alerts
-    # I'm guessing you have a field like 'delay_status' or 'is_delayed'
-    delay_alerts = FlightHistory.objects.filter(
+    # 2. Delay alerts (e.g., any tracked flight with a delay > 0)
+    delay_alerts = TrackedFlight.objects.filter(
         user=user,
-        delay_status='Delayed' # <-- ADJUST THIS to match your model
+        estimatedDelay__gt=0   # --- FIX 3: Use 'estimatedDelay' field ---
     ).count()
     
     # 3. Upcoming flights
-    # I'm guessing 'departure_time' and checking if it's in the future.
-    upcoming_flights = FlightHistory.objects.filter(
+    upcoming_flights = TrackedFlight.objects.filter(
         user=user,
-        departure_time__gte=timezone.now()
+        departureTime__gte=now # --- FIX 4: Use 'departureTime' field ---
     ).count()
     
     # 4. Assemble the data into a dictionary

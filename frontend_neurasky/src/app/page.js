@@ -1,5 +1,5 @@
 'use client'
-
+import { useEffect } from 'react';
 import React, { useState } from 'react';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
@@ -10,14 +10,38 @@ import { AccountSettings } from './components/AccountSettings';
 import { DelayDurationPage } from './components/DelayDurationPage';
 import { DelayReasonsPage } from './components/DelayReasonsPage';
 import { HistoricalTrendsPage } from './components/HistoricalTrendsPage';
+import { useRouter } from 'next/navigation';
 import { Toaster } from './components/ui/sonner';
 
 const API_URL = 'http://127.0.0.1:8000/api';
 
 export default function App() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState('login');
   const [user, setUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
+
+  useEffect(() => {
+    // This component will run when a user visits "/"
+    // We will check for a token and redirect them.
+    
+    const token = localStorage.getItem('authToken');
+    
+    if (token) {
+      // If they have a token, send them to their profile
+      router.push('/dashboard');
+    } else {
+      // If not, send them to the login page
+      router.push('/login');
+    }
+  }, [router]);
+
+  // Show a simple loading text while redirecting
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      Loading...
+    </div>
+  );
 
   const fetchUserProfile = async (token) => {
     try {
@@ -134,6 +158,8 @@ export default function App() {
     );
   }
 
+
+  
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-sky-50 to-cyan-50">
       <Toaster />

@@ -51,12 +51,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
     
 
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        # These are the fields your frontend needs for the
-        # UserProfile.jsx and Navigation.jsx components
-        fields = ('id', 'username', 'email', 'first_name')
+
 
 # In api/serializers.py
 
@@ -90,26 +85,37 @@ class AlertSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    
+    def __init__(self, *args, **kwargs):
+        """
+        This __init__ method is the fix.
+        It removes the default 'username' field and adds our 'email' field.
+        """
+        super().__init__(*args, **kwargs)
+        
+        # Add 'email' field
+        self.fields['email'] = serializers.EmailField()
+        
+        # Remove the default 'username' field
+        if 'username' in self.fields:
+            del self.fields['username']
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # You could add custom claims to the token here if you wanted
-        # token['name'] = user.get_full_name()
         return token
 
     def validate(self, attrs):
-        # The default validator uses 'username'. We override it
-        # to use 'email' instead.
+        # 'attrs' will now correctly contain {'email': '...', 'password': '...'}
         email = attrs.get('email')
         password = attrs.get('password')
 
         if email and password:
-            # Try to authenticate with the email
+            # We authenticate using the email as the username
             user = authenticate(request=self.context.get('request'),
                                 username=email, password=password)
             
-            # If that fails, it's possible the user's email isn't their username
-            # So, we also try finding the user by email first
+            # Fallback (in case username is not email, but this is good to have)
             if not user:
                 try:
                     user_by_email = User.objects.get(email=email)
@@ -124,7 +130,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         else:
             raise serializers.ValidationError('Must include "email" and "password".')
 
-        # The 'attrs' dict passed to the parent must have the 'username'
-        # key, so we set it to the user's email.
+        # --- IMPORTANT ---
+        # The 'super().validate()' call below requires 'attrs' to have the
+        # 'username' key. We set it here after we've already authenticated.
         attrs['username'] = user.email
+        
+        # Now we call the parent's validate method
         return super().validate(attrs)

@@ -10,6 +10,7 @@ import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { Bell, Mail, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import { Skeleton } from './ui/skeleton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,7 @@ export function AccountSettings({ user, onNavigate, onLogout, authToken }) {
   const [weeklyDigest, setWeeklyDigest] = useState(false);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -67,15 +68,43 @@ useEffect(() => {
         setWeeklyDigest(settings.weeklyDigest);
 
       } catch (error) {
-        console.error('Failed to fetch settings:', error);
-        toast.error('Could not load your settings.');
-      } finally {
-        setIsLoadingSettings(false);
+       toast.error('Failed to load settings');
+} finally {
+  setSettingsLoading(false);
       }
     };
 
     fetchSettings();
   }, [authToken]); // Re-run if authToken changes
+
+  const handleSettingsChange = async (key, value) => {
+    // 1. Optimistically update the UI so it feels instant
+    setSettings(prev => ({ ...prev, [key]: value }));
+
+    // 2. Send the update to the backend
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_URL}/profile/settings/`, {
+        // We use PATCH because we're only updating *one* field
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ [key]: value })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update settings');
+      }
+
+      toast.success('Notification settings updated');
+    } catch (error) {
+      toast.error(error.message);
+      // 3. If the server fails, roll back the change in the UI
+      setSettings(prev => ({ ...prev, [key]: !value }));
+    }
+  };
 
   const handleSaveNotifications = async () => {
     setIsSaving(true);
@@ -187,6 +216,33 @@ useEffect(() => {
 
         <div className="space-y-6">
           {/* Notification Settings */}
+          {settingsLoading && (
+  <Card className="border-sky-100">
+    <CardHeader>
+      <Skeleton className="h-6 w-1/2" />
+      <Skeleton className="h-4 w-1/3" />
+    </CardHeader>
+    <CardContent className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-1/3" />
+        <Skeleton className="h-6 w-12" />
+      </div>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-1/3" />
+        <Skeleton className="h-6 w-12" />
+      </div>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-1/3" />
+        <Skeleton className="h-6 w-12" />
+      </div>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-1/3" />
+        <Skeleton className="h-6 w-12" />
+      </div>
+    </CardContent>
+  </Card>
+)}
+          {!settingsLoading && settings && (
           <Card className="border-sky-100">
             <CardHeader>
               <CardTitle className="text-sky-900">Notification Preferences</CardTitle>
@@ -202,10 +258,10 @@ useEffect(() => {
                   </div>
                 </div>
                 <Switch
-                  checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
-                  disabled={isLoadingSettings} // Disable while loading
-                />
+  id="email-notifications"
+  checked={settings.emailNotifications}
+  onCheckedChange={(newValue) => handleSettingsChange('emailNotifications', newValue)}
+/>
               </div>
 
               <Separator />
@@ -219,10 +275,10 @@ useEffect(() => {
                   </div>
                 </div>
                 <Switch
-                  checked={pushNotifications}
-                  onCheckedChange={setPushNotifications}
-                  disabled={isLoadingSettings}
-                />
+  id="push-notifications"
+  checked={settings.pushNotifications}
+  onCheckedChange={(newValue) => handleSettingsChange('pushNotifications', newValue)}
+/>
               </div>
 
               <Separator />
@@ -236,10 +292,10 @@ useEffect(() => {
                   </div>
                 </div>
                 <Switch
-                  checked={delayAlerts}
-                  onCheckedChange={setDelayAlerts}
-                  disabled={isLoadingSettings}
-                />
+  id="delay-alerts"
+  checked={settings.delayAlerts}
+  onCheckedChange={(newValue) => handleSettingsChange('delayAlerts', newValue)}
+/>
               </div>
 
               <Separator />
@@ -253,10 +309,10 @@ useEffect(() => {
                   </div>
                 </div>
                 <Switch
-                  checked={weeklyDigest}
-                  onCheckedChange={setWeeklyDigest}
-                  disabled={isLoadingSettings}
-                />
+  id="weekly-digest"
+  checked={settings.weeklyDigest}
+  onCheckedChange={(newValue) => handleSettingsChange('weeklyDigest', newValue)}
+/>
               </div>
 
               <Button 
@@ -268,7 +324,7 @@ useEffect(() => {
               </Button>
             </CardContent>
           </Card>
-
+)}
           {/* Security Settings */}
           <Card className="border-sky-100">
             <CardHeader>

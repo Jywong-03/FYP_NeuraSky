@@ -162,7 +162,23 @@ useEffect(() => {
     }
   };
 
-  const formatTimestamp = (date) => {
+  const formatTimestamp = (dateString) => {
+    // --- This function is now safer ---
+    
+    // 1. Check if the dateString is valid
+    if (!dateString) {
+      return "Just now"; // Default to "Just now" if data is missing
+    }
+    
+    const date = new Date(dateString);
+
+    // 2. Check if the date object is valid
+    //    isNaN(date.getTime()) is the standard way to check for "Invalid Date"
+    if (isNaN(date.getTime())) {
+      console.error("Invalid date string received:", dateString);
+      return "Invalid date";
+    }
+
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);

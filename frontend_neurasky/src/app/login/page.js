@@ -41,7 +41,7 @@ export default function Login() {
       });
 
       // Send the user to their profile page
-      router.push('/profile');
+      router.push('/dashboard');
 
     } catch (err) {
       setError(err.message);

@@ -19,7 +19,7 @@ urlpatterns = [
 
     # /api/login/ (This is your login endpoint for LoginPage.jsx)
     # Django Rest Framework gives you this for free!
-    path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+   
 
     # /api/login/refresh/ (For refreshing tokens later)
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
