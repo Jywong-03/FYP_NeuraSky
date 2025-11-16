@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     # /api/register/
     path('register/', views.RegisterView.as_view(), name='register'),
+    path('profile/delete/', views.DeleteUserView.as_view(), name='delete-user'),
 
     # /api/login/ (This is your login endpoint for LoginPage.jsx)
     # Django Rest Framework gives you this for free!
@@ -15,6 +16,9 @@ urlpatterns = [
 
     # /api/login/refresh/ (For refreshing tokens later)
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('change-password/', views.ChangePasswordView.as_view(), name='change-password'),
+    path('profile/settings/', views.UserProfileSettingsView.as_view(), name='user-profile-settings'),
 
     path('profile/', views.UserProfileView.as_view(), name='user-profile'),
     path('flights/', views.TrackedFlightView.as_view(), name='tracked-flights'),

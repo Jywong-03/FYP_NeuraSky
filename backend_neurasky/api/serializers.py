@@ -1,6 +1,17 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import TrackedFlight
+from .models import TrackedFlight, UserProfile
+
+class UserProfileSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        # List the fields from your new model
+        fields = (
+            'emailNotifications', 
+            'pushNotifications', 
+            'delayAlerts', 
+            'weeklyDigest'
+        )
 
 # This serializer is for your RegisterPage.jsx
 class RegisterSerializer(serializers.ModelSerializer):
@@ -34,5 +45,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class TrackedFlightSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrackedFlight
-        # ONLY list the fields the frontend will send, plus 'id' for the response
-        fields = ('id', 'flight_number', 'airline', 'origin', 'destination', 'departure_time')
+        
+        # List ALL fields from your TrackedFlight model
+        fields = (
+            'id', 
+            'flight_number', 
+            'date', 
+            'origin', 
+            'destination', 
+            'status', 
+            'estimatedDelay', 
+            'departureTime'
+        )
+        
+        # Mark fields that are set by the server as 'read_only'.
+        # The frontend will send flight_number, date, origin, and destination,
+        # and the server will fill in the rest.
+        read_only_fields = ('status', 'estimatedDelay', 'departureTime')

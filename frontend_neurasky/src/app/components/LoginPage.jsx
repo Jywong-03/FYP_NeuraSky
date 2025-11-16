@@ -24,7 +24,7 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
             <Plane className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-sky-900 mb-2">NeuraSky</h1>
-          <p className="text-sky-700">AI-Powered Flight Delay Intelligence</p>
+          <p className="text-sky-700">Flight Delay Information & Alert System</p>
         </div>
 
         <Card className="border-sky-100 shadow-xl">
@@ -39,7 +39,7 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder=" "
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -51,7 +51,7 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder=" "
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required

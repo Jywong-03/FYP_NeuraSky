@@ -34,7 +34,6 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
     departureTime: '',
   });
 
-  // --- THIS IS THE UPDATED SECTION ---
   // This useEffect fetches all data when the component loads
   useEffect(() => {
     const fetchAllFlightData = async () => {
@@ -67,38 +66,36 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
           return; // No need to fetch live data if no flights are tracked
         }
 
-        // 2. Fetch live status for each tracked flight SEQUENTIALLY
+        // 2. Fetch live status for each tracked flight
         const today = getTodayDate();
-        const liveDataMap = {}; // Create an empty map to store results
-
-        // Use a for...of loop to fetch one-by-one
-        for (const flight of trackedFlights) {
-          try {
-            const res = await fetch(`${API_URL}/flight-status/${flight.flight_number}/${today}/`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-              }
-            });
-
-            if (res.ok) {
-              const liveData = await res.json();
-              liveDataMap[flight.id] = liveData; // Add data to the map
-            } else {
-              console.error(`Failed to fetch live data for ${flight.flight_number}: ${res.statusText}`);
+        const liveDataPromises = trackedFlights.map(flight => {
+          // Use the flight number and today's date
+          return fetch(`${API_URL}/flight-status/${flight.flight_number}/${today}/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
             }
-          } catch (e) {
-            console.error(`Error fetching ${flight.flight_number}:`, e);
-          }
-          
-          // --- THIS IS THE CRITICAL FIX ---
-          // Wait for 1.5 seconds (1500ms) before making the next API call
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          // --- END OF FIX ---
-        }
+          })
+          .then(res => res.ok ? res.json() : null) // Return null if fetch fails for one flight
+          .then(data => ({
+            id: flight.id, // Use our DB ID to map the data
+            data: data 
+          }));
+        });
 
-        setLiveFlightData(liveDataMap); // Set the complete map once the loop is done
+        const liveDataResults = await Promise.all(liveDataPromises);
+        
+        // Convert the results array into a lookup object
+        // e.g., { "1": { ...live data... }, "2": { ...live data... } }
+        const liveDataMap = liveDataResults.reduce((acc, result) => {
+          if (result.data) {
+            acc[result.id] = result.data;
+          }
+          return acc;
+        }, {});
+
+        setLiveFlightData(liveDataMap);
 
       } catch (error) {
         console.error('Error fetching flight data:', error);
@@ -111,8 +108,6 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
     fetchAllFlightData();
     
   }, [authToken]); // Only re-run all this if the user token changes (login/logout)
-  // --- END OF UPDATED SECTION ---
-
 
   const handleAddFlight = async () => {
     if (!newFlight.flightNumber || !newFlight.airline || !newFlight.destination || !newFlight.origin || !newFlight.departureTime) {
@@ -121,13 +116,6 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
     }
 
     try {
-      // --- FIX-B Start: Convert local time to UTC ---
-      // Convert the local datetime string to a Date object
-      const localDate = new Date(newFlight.departureTime);
-      // Convert the Date object to a UTC ISO string
-      const utcDepartureTime = localDate.toISOString();
-      // --- FIX-B End ---
-
       const response = await fetch(`${API_URL}/flights/`, {
         method: 'POST',
         headers: {
@@ -139,7 +127,7 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
           airline: newFlight.airline,
           origin: newFlight.origin,
           destination: newFlight.destination,
-          departure_time: utcDepartureTime, // <-- Use the converted UTC string
+          departure_time: newFlight.departureTime,
         })
       });
 
@@ -350,7 +338,7 @@ export function MyFlights({ user, onNavigate, onLogout, authToken }) {
                     id="departureTime"
                     type="datetime-local"
                     value={newFlight.departureTime}
-                    onChange={(e) => setNewFlight({ ...newFlight, departureTime: e.g.target.value })}
+                    onChange={(e) => setNewFlight({ ...newFlight, departureTime: e.target.value })}
                     className="border-sky-200"
                   />
                 </div>

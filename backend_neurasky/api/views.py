@@ -1,21 +1,20 @@
 import os
 import requests
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.conf import settings
-
-from rest_framework import generics, permissions
-from django.contrib.auth.models import User
-from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer
-from .models import TrackedFlight
-
 import joblib
 import pandas as pd
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+from rest_framework import generics, permissions
 from django.conf import settings
-import os
-from .models import TrackedFlight, FlightHistory # Make sure FlightHistory is added
+from django.contrib.auth.models import User
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
+from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer, UserProfileSettingsSerializer
+from .models import TrackedFlight, FlightHistory, UserProfile
+
+
 
 
 # Load the ML model and encoder when the server starts
@@ -35,11 +34,50 @@ except FileNotFoundError:
     ML_MODEL = None
     DATA_ENCODER = None
 
+# --- NEW VIEW FOR GETTING/UPDATING SETTINGS ---
+class UserProfileSettingsView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSettingsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # This view returns the 'UserProfile' object linked to the request.user
+        # The 'profile' related_name comes from our UserProfile model
+        return self.request.user.profile
+    
+# --- NEW VIEW FOR DELETING A USER ---
+class DeleteUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        user = self.request.user
+        try:
+            user.delete()
+            return Response({"message": "Account deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
 # This creates the '/api/register/' endpoint
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,) # Allows anyone (even not logged in) to register
     serializer_class = RegisterSerializer
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        current_password = request.data.get('currentPassword')
+        new_password = request.data.get('newPassword')
+
+        if not user.check_password(current_password):
+            return Response({"error": "Wrong password."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # You can add password validation here (e.g., length)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
 class UserProfileView(generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
@@ -102,6 +140,14 @@ class TrackedFlightView(generics.ListCreateAPIView):
                 
                 # 4. Re-save the object to the database with all the new info
                 tracked_flight.save()
+
+                # 5. Save this result to your permanent analytics history
+                FlightHistory.objects.create(
+                    flight_number=tracked_flight.flight_number,
+                    airline=flight_data.get('airline', {}).get('name', 'Unknown'), # Example
+                    status=tracked_flight.status,
+                    delay_minutes=tracked_flight.estimatedDelay
+                )
 
         except Exception as e:
             # Handle error (e.g., flight not found, API down)
