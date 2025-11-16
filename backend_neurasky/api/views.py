@@ -9,13 +9,14 @@ from rest_framework import permissions
 from rest_framework import generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
-from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer, UserProfileSettingsSerializer, UserProfileSerializer
-from .models import TrackedFlight, FlightHistory, UserProfile
+from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer, UserProfileSettingsSerializer, UserProfileSerializer, AlertSerializer, MyTokenObtainPairSerializer
+from .models import TrackedFlight, FlightHistory, UserProfile, Alert
 
 
 
@@ -387,3 +388,61 @@ def flight_stats_view(request):
     }
     
     return Response(stats_data)
+
+# 1. GET /api/alerts/
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_alerts(request):
+    alerts = Alert.objects.filter(user=request.user)
+    serializer = AlertSerializer(alerts, many=True)
+    return Response(serializer.data)
+
+# 2. GET /api/alerts/new/
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_new_alerts(request):
+    # Get the ID of the latest alert the user has
+    # The frontend sends this as a query parameter: ?since=123
+    since_id = request.query_params.get('since', 0)
+    
+    alerts = Alert.objects.filter(
+        user=request.user,
+        id__gt=since_id  # Get all alerts with an ID greater than the one user has
+    )
+    serializer = AlertSerializer(alerts, many=True)
+    return Response(serializer.data)
+
+# 3. POST /api/alerts/mark-read/
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_alert_read(request):
+    alert_id = request.data.get('id')
+    try:
+        alert = Alert.objects.get(id=alert_id, user=request.user)
+        alert.read = True
+        alert.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except Alert.DoesNotExist:
+        return Response({"error": "Alert not found"}, status=status.HTTP_404_NOT_FOUND)
+
+# 4. POST /api/alerts/mark-all-read/
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_all_alerts_read(request):
+    Alert.objects.filter(user=request.user, read=False).update(read=True)
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+# 5. DELETE /api/alerts/delete/
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_alert(request):
+    alert_id = request.data.get('id')
+    try:
+        alert = Alert.objects.get(id=alert_id, user=request.user)
+        alert.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except Alert.DoesNotExist:
+        return Response({"error": "Alert not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer

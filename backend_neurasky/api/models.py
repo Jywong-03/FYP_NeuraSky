@@ -62,3 +62,31 @@ def save_user_profile(sender, instance, **kwargs):
         UserProfile.objects.create(user=instance)
     else:
         instance.profile.save()
+
+class Alert(models.Model):
+    # Link the alert to a specific user
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="alerts")
+    
+    # These fields match the component's state
+    title = models.CharField(max_length=100)
+    message = models.TextField()
+    read = models.BooleanField(default=False)
+    
+    # We use 'timestamp' to match the frontend
+    timestamp = models.DateTimeField(auto_now_add=True) 
+    
+    # Store the alert "type" (e.g., 'delay', 'gate-change')
+    type = models.CharField(max_length=50, default='info')
+    
+    # Store the "severity" (e.g., 'high', 'medium', 'low')
+    severity = models.CharField(max_length=50, default='low')
+    
+    # Store the related flight number, but allow it to be blank
+    flightNumber = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+    
+    class Meta:
+        # Show newest alerts first by default
+        ordering = ['-timestamp']

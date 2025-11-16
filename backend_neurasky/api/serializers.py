@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import TrackedFlight, UserProfile
+from .models import TrackedFlight, UserProfile, Alert
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
 
 class UserProfileSettingsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -78,3 +80,51 @@ class TrackedFlightSerializer(serializers.ModelSerializer):
         # The frontend will send flight_number, date, origin, and destination,
         # and the server will fill in the rest.
         read_only_fields = ('status', 'estimatedDelay', 'departureTime')
+
+class AlertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Alert
+        # Define all the fields to send to the frontend
+        fields = ['id', 'user', 'title', 'message', 'read', 'timestamp', 'type', 'severity', 'flightNumber']
+        # We only want to read the user, not change it
+        read_only_fields = ['user']
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # You could add custom claims to the token here if you wanted
+        # token['name'] = user.get_full_name()
+        return token
+
+    def validate(self, attrs):
+        # The default validator uses 'username'. We override it
+        # to use 'email' instead.
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if email and password:
+            # Try to authenticate with the email
+            user = authenticate(request=self.context.get('request'),
+                                username=email, password=password)
+            
+            # If that fails, it's possible the user's email isn't their username
+            # So, we also try finding the user by email first
+            if not user:
+                try:
+                    user_by_email = User.objects.get(email=email)
+                    if user_by_email.check_password(password):
+                        user = user_by_email
+                except User.DoesNotExist:
+                    pass
+
+            if not user:
+                raise serializers.ValidationError('No active account found with the given credentials')
+
+        else:
+            raise serializers.ValidationError('Must include "email" and "password".')
+
+        # The 'attrs' dict passed to the parent must have the 'username'
+        # key, so we set it to the user's email.
+        attrs['username'] = user.email
+        return super().validate(attrs)
