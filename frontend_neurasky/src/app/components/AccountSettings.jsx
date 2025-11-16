@@ -7,10 +7,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
-import { Separator } from './ui/separator';
-import { Bell, Mail, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from './ui/skeleton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,70 +19,117 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from './ui/alert-dialog';
+import { Skeleton } from './ui/skeleton';
 
+// --- FIX 1: API_URL moved *outside* the component ---
 const API_URL = 'http://127.0.0.1:8000/api';
 
-export function AccountSettings({ user, onNavigate, onLogout, authToken }) {
-  // --- STATE FOR NOTIFICATIONS ---
-  // We'll set these AFTER we fetch them
-  const [emailNotifications, setEmailNotifications] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [delayAlerts, setDelayAlerts] = useState(false);
-  const [weeklyDigest, setWeeklyDigest] = useState(false);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+export function AccountSettings({ user, onNavigate, onLogout }) {
+  
+  const [settings, setSettings] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
+  
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false); // For loading state
 
-  const [isDeleting, setIsDeleting] = useState(false);
+  // --- API_URL constant removed from here ---
 
-useEffect(() => {
+  const getAuthToken = () => {
+    return localStorage.getItem('authToken');
+  };
+
+  useEffect(() => {
     const fetchSettings = async () => {
-      if (!authToken) return;
-
       try {
+        const token = getAuthToken();
         const response = await fetch(`${API_URL}/profile/settings/`, {
-          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
+            'Authorization': `Bearer ${token}`
+          }
         });
-
         if (!response.ok) {
-          throw new Error('Failed to fetch settings');
+          throw new Error('Failed to load settings');
         }
-
-        const settings = await response.json();
-        
-        // Update state with fetched data
-        setEmailNotifications(settings.emailNotifications);
-        setPushNotifications(settings.pushNotifications);
-        setDelayAlerts(settings.delayAlerts);
-        setWeeklyDigest(settings.weeklyDigest);
-
+        const data = await response.json();
+        setSettings(data);
       } catch (error) {
-       toast.error('Failed to load settings');
-} finally {
-  setSettingsLoading(false);
+        toast.error('Failed to load settings');
+      } finally {
+        setSettingsLoading(false);
       }
     };
 
     fetchSettings();
-  }, [authToken]); // Re-run if authToken changes
+  }, []); // --- FIX 2: Dependency array is now empty ---
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    try {
+      const token = getAuthToken();
+      // --- FIX 3: Corrected API URL (was /change-password/, should be /profile/change-password/)
+      const response = await fetch(`${API_URL}/profile/change-password/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: currentPassword, // --- FIX 4: Send currentPassword (not current_password) ---
+          newPassword: newPassword, // --- FIX 5: Send newPassword (not new_password) ---
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        // Use data.error from the backend response
+        throw new Error(data.error || 'Failed to change password');
+      }
+      
+      toast.success('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      const token = getAuthToken();
+      // --- FIX 6: Corrected API URL (was /delete-account/, should be /profile/delete/) ---
+      const response = await fetch(`${API_URL}/profile/delete/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete account');
+      }
+      
+      toast.success('Account deleted successfully');
+      onLogout(); // Log the user out
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
   const handleSettingsChange = async (key, value) => {
-    // 1. Optimistically update the UI so it feels instant
     setSettings(prev => ({ ...prev, [key]: value }));
 
-    // 2. Send the update to the backend
     try {
       const token = getAuthToken();
       const response = await fetch(`${API_URL}/profile/settings/`, {
-        // We use PATCH because we're only updating *one* field
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -97,324 +141,211 @@ useEffect(() => {
       if (!response.ok) {
         throw new Error('Failed to update settings');
       }
-
       toast.success('Notification settings updated');
     } catch (error) {
       toast.error(error.message);
-      // 3. If the server fails, roll back the change in the UI
       setSettings(prev => ({ ...prev, [key]: !value }));
     }
   };
 
-  const handleSaveNotifications = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch(`${API_URL}/profile/settings/`, {
-        method: 'PUT', // Use PUT to update
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({
-          emailNotifications: emailNotifications,
-          pushNotifications: pushNotifications,
-          delayAlerts: delayAlerts,
-          weeklyDigest: weeklyDigest,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save');
-      }
-
-      toast.success('Notification preferences saved!');
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      toast.error('Could not save your preferences.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    setIsUpdating(true);
-
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match.');
-      setIsUpdating(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/change-password/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}` // Send the token
-        },
-        body: JSON.stringify({
-          currentPassword: currentPassword,
-          newPassword: newPassword,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || 'Failed to update password.');
-      } else {
-        toast.success(data.message || 'Password updated successfully!');
-        // Clear the form
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }
-    } catch (error) {
-      console.error('Password change error:', error);
-      toast.error('An error occurred. Please try again.');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`${API_URL}/profile/delete/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete account');
-      }
-
-      toast.success('Account deleted successfully.');
-      onLogout(); // This will log the user out and return them to the login page
-
-    } catch (error) {
-      console.error('Failed to delete account:', error);
-      toast.error('Could not delete account. Please try again.');
-      setIsDeleting(false);
-    }
-    // No 'finally' block needed, as onLogout() navigates away
-  };
-
   return (
-    <div className="min-h-screen">
+    <>
       <Navigation user={user} currentPage="settings" onNavigate={onNavigate} onLogout={onLogout} />
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-sky-900 mb-2">Account Settings</h1>
-          <p className="text-sky-700">Manage your preferences and security</p>
+          <h1 className="text-sky-900 mb-2">Settings</h1>
+          <p className="text-sky-700">Manage your account and preferences</p>
         </div>
 
         <div className="space-y-6">
-          {/* Notification Settings */}
+          
+          {/* --- Loading Skeleton (shows when settingsLoading is true) --- */}
           {settingsLoading && (
-  <Card className="border-sky-100">
-    <CardHeader>
-      <Skeleton className="h-6 w-1/2" />
-      <Skeleton className="h-4 w-1/3" />
-    </CardHeader>
-    <CardContent className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-1/3" />
-        <Skeleton className="h-6 w-12" />
-      </div>
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-1/3" />
-        <Skeleton className="h-6 w-12" />
-      </div>
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-1/3" />
-        <Skeleton className="h-6 w-12" />
-      </div>
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-1/3" />
-        <Skeleton className="h-6 w-12" />
-      </div>
-    </CardContent>
-  </Card>
-)}
+            <>
+              <Card className="border-sky-100">
+                <CardHeader>
+                  <Skeleton className="h-6 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-1/3" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-sky-100">
+                <CardHeader>
+                  <Skeleton className="h-6 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Skeleton className="h-5 w-1/3" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-5 w-1/3" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-5 w-1/3" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-32" />
+                </CardContent>
+              </Card>
+              <Card className="border-red-200">
+                <CardHeader>
+                  <Skeleton className="h-6 w-1/2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-10 w-32" />
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* --- Actual Content (shows when settingsLoading is false and settings exist) --- */}
           {!settingsLoading && settings && (
-          <Card className="border-sky-100">
-            <CardHeader>
-              <CardTitle className="text-sky-900">Notification Preferences</CardTitle>
-              <CardDescription>Choose how you want to receive updates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-sky-500" />
-                  <div>
-                    <p className="text-sky-900">Email Notifications</p>
-                    <p className="text-sky-600">Receive updates via email</p>
+            <>
+              <Card className="border-sky-100">
+                <CardHeader>
+                  <CardTitle className="text-sky-900">Notification Preferences</CardTitle>
+                  <CardDescription>Control how you receive alerts</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sky-900">Email Notifications</p>
+                      <p className="text-sky-600">Receive alerts via email</p>
+                    </div>
+                    <Switch
+                      id="email-notifications"
+                      checked={settings.emailNotifications}
+                      onCheckedChange={(newValue) => handleSettingsChange('emailNotifications', newValue)}
+                    />
                   </div>
-                </div>
-                <Switch
-  id="email-notifications"
-  checked={settings.emailNotifications}
-  onCheckedChange={(newValue) => handleSettingsChange('emailNotifications', newValue)}
-/>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Smartphone className="w-5 h-5 text-sky-500" />
-                  <div>
-                    <p className="text-sky-900">Push Notifications</p>
-                    <p className="text-sky-600">Get instant alerts on your device</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sky-900">Push Notifications</p>
+                      <p className="text-sky-600">Receive alerts on your device</p>
+                    </div>
+                    <Switch
+                      id="push-notifications"
+                      checked={settings.pushNotifications}
+                      onCheckedChange={(newValue) => handleSettingsChange('pushNotifications', newValue)}
+                    />
                   </div>
-                </div>
-                <Switch
-  id="push-notifications"
-  checked={settings.pushNotifications}
-  onCheckedChange={(newValue) => handleSettingsChange('pushNotifications', newValue)}
-/>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Bell className="w-5 h-5 text-sky-500" />
-                  <div>
-                    <p className="text-sky-900">Delay Alerts</p>
-                    <p className="text-sky-600">Real-time notifications for flight delays</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sky-900">Delay Alerts</p>
+                      <p className="text-sky-600">Notify me about flight delays</p>
+                    </div>
+                    <Switch
+                      id="delay-alerts"
+                      checked={settings.delayAlerts}
+                      onCheckedChange={(newValue) => handleSettingsChange('delayAlerts', newValue)}
+                    />
                   </div>
-                </div>
-                <Switch
-  id="delay-alerts"
-  checked={settings.delayAlerts}
-  onCheckedChange={(newValue) => handleSettingsChange('delayAlerts', newValue)}
-/>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-sky-500" />
-                  <div>
-                    <p className="text-sky-900">Weekly Digest</p>
-                    <p className="text-sky-600">Summary of your upcoming flights</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sky-900">Weekly Digest</p>
+                      <p className="text-sky-600">A summary of your flight activity</p>
+                    </div>
+                    <Switch
+                      id="weekly-digest"
+                      checked={settings.weeklyDigest}
+                      onCheckedChange={(newValue) => handleSettingsChange('weeklyDigest', newValue)}
+                    />
                   </div>
-                </div>
-                <Switch
-  id="weekly-digest"
-  checked={settings.weeklyDigest}
-  onCheckedChange={(newValue) => handleSettingsChange('weeklyDigest', newValue)}
-/>
-              </div>
+                </CardContent>
+              </Card>
 
-              <Button 
-                onClick={handleSaveNotifications} // Connects to new function
-                className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-                disabled={isSaving || isLoadingSettings} // Disable while saving/loading
-              >
-                {isSaving ? 'Saving...' : 'Save Preferences'}
-              </Button>
-            </CardContent>
-          </Card>
-)}
-          {/* Security Settings */}
-          <Card className="border-sky-100">
-            <CardHeader>
-              <CardTitle className="text-sky-900">Security</CardTitle>
-              <CardDescription>Update your password and security settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    className="border-sky-200"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    className="border-sky-200"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    className="border-sky-200"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button 
-                  type="submit"
-                  className="bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? 'Updating...' : 'Update Password'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              <Card className="border-sky-100">
+                <CardHeader>
+                  <CardTitle className="text-sky-900">Change Password</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="bg-sky-600 hover:bg-sky-700">
+                      Update Password
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
 
-          {/* Danger Zone */}
-          <Card className="border-red-200">
-            <CardHeader>
-              <CardTitle className="text-red-700">Danger Zone</CardTitle>
-              <CardDescription>Irreversible account actions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Delete Account</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete
-                      your account and remove all your data from our servers.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-red-600 hover:bg-red-700"
-                      onClick={handleDeleteAccount}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? 'Deleting...' : 'Yes, delete account'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardContent>
-          </Card>
+              <Card className="border-red-200">
+                <CardHeader>
+                  <CardTitle className="text-red-900">Delete Account</CardTitle>
+                  <CardDescription>Permanently delete your account and all associated data.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Delete Account</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your account
+                          and remove your data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700">
+                          Yes, delete my account
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardContent>
+              </Card>
+            </>
+          )} 
+          {/* --- FIX 7: This is the correct place for the closing bracket --- */}
+
         </div>
       </main>
-    </div>
+    </>
   );
 }
