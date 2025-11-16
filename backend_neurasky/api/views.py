@@ -7,11 +7,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework import generics, permissions
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
-from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer, UserProfileSettingsSerializer
+from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer, UserProfileSettingsSerializer, UserProfileSerializer
 from .models import TrackedFlight, FlightHistory, UserProfile
 
 
@@ -335,3 +338,52 @@ class HistoricalTrendsView(APIView):
         ]
 
         return Response(formatted_data)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile_view(request):
+    # Because of @permission_classes([IsAuthenticated]),
+    # 'request.user' will be the logged-in user.
+    user = request.user
+    serializer = UserProfileSerializer(user)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def flight_stats_view(request):
+    user = request.user
+    
+    # --- IMPORTANT ---
+    # You MUST adjust these queries to match your FlightHistory model's fields.
+    # I am guessing your field names based on the component.
+    
+    # 1. Total flights tracked (e.g., all past flights)
+    # I'm guessing 'departure_time' and checking if it's in the past.
+    flights_tracked = FlightHistory.objects.filter(
+        user=user,
+        departure_time__lt=timezone.now() 
+    ).count()
+    
+    # 2. Delay alerts
+    # I'm guessing you have a field like 'delay_status' or 'is_delayed'
+    delay_alerts = FlightHistory.objects.filter(
+        user=user,
+        delay_status='Delayed' # <-- ADJUST THIS to match your model
+    ).count()
+    
+    # 3. Upcoming flights
+    # I'm guessing 'departure_time' and checking if it's in the future.
+    upcoming_flights = FlightHistory.objects.filter(
+        user=user,
+        departure_time__gte=timezone.now()
+    ).count()
+    
+    # 4. Assemble the data into a dictionary
+    stats_data = {
+        'flightsTracked': flights_tracked,
+        'delayAlerts': delay_alerts,
+        'upcomingFlights': upcoming_flights
+    }
+    
+    return Response(stats_data)

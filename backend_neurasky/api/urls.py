@@ -9,6 +9,8 @@ urlpatterns = [
     # /api/register/
     path('register/', views.RegisterView.as_view(), name='register'),
     path('profile/delete/', views.DeleteUserView.as_view(), name='delete-user'),
+    path('user/profile/', views.user_profile_view, name='user-profile'),
+    path('flights/stats/', views.flight_stats_view, name='flight-stats'),
 
     # /api/login/ (This is your login endpoint for LoginPage.jsx)
     # Django Rest Framework gives you this for free!

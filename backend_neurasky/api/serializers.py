@@ -13,6 +13,22 @@ class UserProfileSettingsSerializer(serializers.ModelSerializer):
             'weeklyDigest'
         )
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    # This renames 'date_joined' to 'memberSince' to match the frontend
+    memberSince = serializers.DateTimeField(source='date_joined', read_only=True)
+    
+    # This creates a 'name' field from 'first_name' and 'last_name'
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        # These are the fields your frontend component needs
+        fields = ['id', 'email', 'name', 'memberSince']
+
+    def get_name(self, obj):
+        # Combines first and last name, or just uses username as a fallback
+        return obj.get_full_name() or obj.username
+
 # This serializer is for your RegisterPage.jsx
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:

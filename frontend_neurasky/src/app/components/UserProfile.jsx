@@ -7,7 +7,21 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Mail, Calendar, Plane, Clock } from 'lucide-react';
 
-export function UserProfile({ user, onNavigate, onLogout }) {
+export function UserProfile({ user, travelStats, onNavigate, onLogout }) {
+
+const formatMemberSince = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateString; // Fallback to the original string
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <Navigation user={user} currentPage="profile" onNavigate={onNavigate} onLogout={onLogout} />
@@ -27,14 +41,14 @@ export function UserProfile({ user, onNavigate, onLogout }) {
               <div className="flex items-center gap-6 mb-6">
                 <Avatar className="w-24 h-24">
                   <AvatarFallback className="bg-linear-to-br from-blue-500 to-cyan-500 text-white text-3xl">
-                    {user.name.charAt(0)}
+                    {user.name ? user.name.charAt(0) : '?'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="text-sky-900 mb-1">{user.name}</h2>
+                  <h2 className="text-sky-900 mb-1">{user.name || 'User Name'}</h2>
                   <div className="flex items-center gap-2 text-sky-600">
                     <Mail className="w-4 h-4" />
-                    <span>{user.email}</span>
+                    <span>{user.email || 'user@example.com'}</span>
                   </div>
                 </div>
               </div>
@@ -44,13 +58,12 @@ export function UserProfile({ user, onNavigate, onLogout }) {
                   <p className="text-sky-600 mb-1">Member Since</p>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-sky-500" />
-                    <span className="text-sky-900">October 2024</span>
+                    {/* This now reads from the 'user' prop */}
+                    <span className="text-sky-900">{formatMemberSince(user.memberSince)}</span>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sky-600 mb-1">Account Type</p>
-                  <Badge className="bg-linear-to-r from-blue-500 to-cyan-500">Premium</Badge>
-                </div>
+                {/* The "Account Type" div that was here has been removed.
+                */}
               </div>
             </CardContent>
           </Card>
@@ -64,17 +77,18 @@ export function UserProfile({ user, onNavigate, onLogout }) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-4 bg-sky-50 rounded-lg">
                   <Plane className="w-8 h-8 text-sky-500 mx-auto mb-2" />
-                  <p className="text-sky-900 mb-1">12</p>
+                  {/* These values now come from the 'travelStats' prop */}
+                  <p className="text-sky-900 mb-1">{travelStats?.flightsTracked || 0}</p>
                   <p className="text-sky-600">Flights Tracked</p>
                 </div>
                 <div className="text-center p-4 bg-sky-50 rounded-lg">
                   <Clock className="w-8 h-8 text-sky-500 mx-auto mb-2" />
-                  <p className="text-sky-900 mb-1">3</p>
+                  <p className="text-sky-900 mb-1">{travelStats?.delayAlerts || 0}</p>
                   <p className="text-sky-600">Delay Alerts</p>
                 </div>
                 <div className="text-center p-4 bg-sky-50 rounded-lg">
                   <Calendar className="w-8 h-8 text-sky-500 mx-auto mb-2" />
-                  <p className="text-sky-900 mb-1">5</p>
+                  <p className="text-sky-900 mb-1">{travelStats?.upcomingFlights || 0}</p>
                   <p className="text-sky-600">Upcoming Flights</p>
                 </div>
               </div>
