@@ -45,7 +45,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                 <Input
                   id="name"
                   type="text"
-                  placeholder="Alex Johnson"
+                  placeholder=" "
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -57,7 +57,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder=" "
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -69,7 +69,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder=" "
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -81,7 +81,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder=" "
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

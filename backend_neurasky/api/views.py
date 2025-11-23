@@ -5,6 +5,7 @@ import pandas as pd
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import serializers
 from rest_framework import permissions
 from rest_framework import generics, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -100,18 +101,11 @@ class TrackedFlightView(generics.ListCreateAPIView):
         return TrackedFlight.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # This is where you save the new flight
-        # 'serializer.save()' creates the object in the db
-        # We can get the instance that was just created
-        
-        # 1. Save the basic info from the user (like flight_number, date)
-        #    We add user=self.request.user here
+        # 1. Save the basic info *temporarily*
         tracked_flight = serializer.save(user=self.request.user)
 
-        # 2. NOW, let's get the *real* data for this flight
-        #    (Assuming your serializer gives you flight_number and date)
         flight_number = tracked_flight.flight_number
-        date = tracked_flight.date.strftime('%Y-%m-%d') # Format date as YYYY-MM-DD
+        date = tracked_flight.date.strftime('%Y-%m-%d')
 
         url = f"https://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
         headers = {
@@ -122,42 +116,75 @@ class TrackedFlightView(generics.ListCreateAPIView):
 
         try:
             response = requests.get(url, headers=headers, params=querystring)
-            response.raise_for_status()
+            response.raise_for_status() # This will raise HTTPError for 4xx/5xx
             data = response.json()
 
             if data and len(data) > 0:
-                flight_data = data[0] # Get first flight result
+                flight_data = data[0]
                 
                 # 3. Update the 'tracked_flight' object with real data
                 tracked_flight.status = flight_data.get('status', 'Unknown')
                 
-                # Get delay info (it might be in different places)
+                if flight_data.get('departure', {}).get('airport', {}):
+                    tracked_flight.origin = flight_data['departure']['airport'].get('iata', 'N/A')
+                
+                if flight_data.get('arrival', {}).get('airport', {}):
+                    tracked_flight.destination = flight_data['arrival']['airport'].get('iata', 'N/A')
+
                 delay_minutes = 0
                 if flight_data.get('departure') and flight_data['departure'].get('delay', {}):
                     delay_minutes = flight_data['departure']['delay'].get('minutes', 0)
                 
                 tracked_flight.estimatedDelay = delay_minutes
 
-                # Save the real departure time
                 if flight_data.get('departure') and flight_data['departure'].get('scheduledTimeLocal'):
                     tracked_flight.departureTime = flight_data['departure']['scheduledTimeLocal']
                 
-                # 4. Re-save the object to the database with all the new info
+                # 4. Re-save the object *now that it has all data*
                 tracked_flight.save()
 
-                # 5. Save this result to your permanent analytics history
+                # 5. Save to history
+                airline_name = "Unknown"
+                if flight_data.get('airline', {}).get('name'):
+                    airline_name = flight_data['airline']['name']
+
+                # --- THIS IS THE FIX ---
+                # The FlightHistory model does not have 'user' or 'departure_time' fields.
                 FlightHistory.objects.create(
                     flight_number=tracked_flight.flight_number,
-                    airline=flight_data.get('airline', {}).get('name', 'Unknown'), # Example
+                    airline=airline_name, 
                     status=tracked_flight.status,
                     delay_minutes=tracked_flight.estimatedDelay
+                    # departure_time=tracked_flight.departureTime <-- Removed
+                    # user=self.request.user, <-- Removed
                 )
+                # --- END OF FIX ---
+            
+            else:
+                # Handle when flight is not found by API
+                tracked_flight.delete() # Delete the temporary object
+                raise serializers.ValidationError('Flight not found. Please check the flight number and date.')
 
+        except requests.exceptions.HTTPError as e:
+            # Handle API errors (like bad key or flight not found)
+            tracked_flight.delete() # Delete the temporary object
+            if e.response.status_code == 401 or e.response.status_code == 403:
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print("RAPIDAPI KEY IS INVALID OR QUOTA EXCEEDED. CHECK .env FILE")
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                raise serializers.ValidationError('Could not fetch flight data. Server configuration error.')
+            elif e.response.status_code == 429:
+                 raise serializers.ValidationError('API quota exceeded. Please try again later.')
+            else:
+                raise serializers.ValidationError(f'Flight not found or invalid date. (Error: {e.response.status_code})')
+        
         except Exception as e:
-            # Handle error (e.g., flight not found, API down)
-            # For now, we just print it. You can log this later.
-            print(f"Could not fetch live data for {flight_number}: {e}")
-            # The flight is still saved, just without the extra data
+            # Handle all other errors
+            tracked_flight.delete() # Delete the temporary object
+            print(f"An unknown error occurred: {e}")
+            # --- THIS IS THE FIX ---
+            # We now raise the *actual* Python error message
+            raise serializers.ValidationError(f'An unknown error occurred: {e}')
 
 class FlightStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -441,3 +468,11 @@ def delete_alert(request):
     
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+class TrackedFlightDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TrackedFlightSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Only allow the user to see/delete their *own* flights
+        return TrackedFlight.objects.filter(user=self.request.user)

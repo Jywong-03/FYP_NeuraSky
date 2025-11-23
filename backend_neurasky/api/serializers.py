@@ -71,10 +71,10 @@ class TrackedFlightSerializer(serializers.ModelSerializer):
             'departureTime'
         )
         
-        # Mark fields that are set by the server as 'read_only'.
-        # The frontend will send flight_number, date, origin, and destination,
-        # and the server will fill in the rest.
-        read_only_fields = ('status', 'estimatedDelay', 'departureTime')
+        # --- THIS IS THE FIX ---
+        # We must also mark 'origin' and 'destination' as read-only,
+        # just like the other fields populated by the server.
+        read_only_fields = ('origin', 'destination', 'status', 'estimatedDelay', 'departureTime')
 
 class AlertSerializer(serializers.ModelSerializer):
     class Meta:
