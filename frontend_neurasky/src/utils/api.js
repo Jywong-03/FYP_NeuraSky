@@ -81,7 +81,7 @@ export const api = {
   get: (endpoint) => fetchWithAuth(endpoint, { method: 'GET' }),
   post: (endpoint, body) => fetchWithAuth(endpoint, { method: 'POST', body: JSON.stringify(body) }),
   put: (endpoint, body) => fetchWithAuth(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
-  delete: (endpoint) => fetchWithAuth(endpoint, { method: 'DELETE' }),
+  delete: (endpoint, body) => fetchWithAuth(endpoint, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
   login: async (email, password) => {
     const response = await fetch(`${API_BASE_URL}/token/`, {
       method: 'POST',

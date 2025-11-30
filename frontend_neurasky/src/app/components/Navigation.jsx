@@ -3,7 +3,8 @@
 import React from 'react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { Plane, LayoutDashboard, Clock, User, Settings, LogOut, BarChart3, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
+import { LayoutDashboard, Clock, User, Settings, LogOut, BarChart3, TrendingUp } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +21,7 @@ export function Navigation({ user, currentPage, onNavigate, onLogout }) {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-10 h-10 bg-linear-to-br from-blue-500 to-cyan-500 rounded-xl">
-                <Plane className="w-5 h-5 text-white" />
-              </div>
+              <Image src="/NeuraSky.svg" alt="NeuraSky Logo" width={48} height={48} className="w-12 h-12" />
               <span className="text-sky-900">NeuraSky</span>
             </div>
             

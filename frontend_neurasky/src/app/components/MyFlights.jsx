@@ -21,11 +21,56 @@ export function MyFlights({ user, onNavigate, onLogout }) {
   const [flightDate, setFlightDate] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
+  // Helper function to get today's date in YYYY-MM-DD format
+  function getTodayDate() {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  }
+
   const fetchFlights = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.get('/flights/');
-      setFlights(data);
+      // 1. Fetch stored flights
+      const storedFlights = await api.get('/flights/');
+      
+      if (storedFlights.length === 0) {
+        setFlights([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fetch live status for each
+      const flightPromises = storedFlights.map(flight => {
+        const date = flight.date || getTodayDate();
+        return api.get(`/flight-status/${flight.flight_number}/${date}/`)
+          .then(live => ({ ...flight, live })) // Attach live data to the flight object
+          .catch(() => ({ ...flight, live: null })); // Keep flight even if live fetch fails
+      });
+
+      const results = await Promise.all(flightPromises);
+
+      // 3. Merge and Map
+      const mergedFlights = results.map(item => {
+        const live = item.live;
+        if (!live) return item; // Return stored item if live fetch failed
+
+        return {
+          ...item, // Keep original stored fields (id, etc.)
+          
+          // Overwrite with live data where available
+          flight_number: live.number || item.flight_number,
+          origin: live.departure?.airport?.iata || item.origin,
+          destination: live.arrival?.airport?.iata || item.destination,
+          
+          departureTime: live.departure?.scheduledTimeLocal || item.departureTime,
+          // arrivalTime: live.arrival?.scheduledTimeLocal, // Optional, if you want to add it
+
+          status: live.status ? live.status.toLowerCase().replace(/ /g, '-') : item.status,
+          estimatedDelay: live.departure?.delay?.minutes || 0,
+        };
+      });
+
+      setFlights(mergedFlights);
       setError(null);
     } catch (err) {
       setError(err.message);

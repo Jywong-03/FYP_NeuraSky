@@ -4,6 +4,9 @@ import { Toaster } from "./components/ui/sonner";
 export const metadata = {
   title: "NeuraSky",
   description: "Flight Analytics Dashboard",
+  icons: {
+    icon: "/NeuraSky.svg",
+  },
 };
 
 export const viewport = {

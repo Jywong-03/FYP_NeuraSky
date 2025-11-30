@@ -394,23 +394,21 @@ def flight_stats_view(request):
     user = request.user
     now = timezone.now() # Get the current time once
 
-    # --- FIX 1: Query TrackedFlight, not FlightHistory ---
-    # 1. Total flights tracked (past flights)
+    # 1. Total flights tracked (ALL flights)
     flights_tracked = TrackedFlight.objects.filter(
-        user=user,
-        departureTime__lt=now  # --- FIX 2: Use 'departureTime' field ---
+        user=user
     ).count()
     
     # 2. Delay alerts (e.g., any tracked flight with a delay > 0)
     delay_alerts = TrackedFlight.objects.filter(
         user=user,
-        estimatedDelay__gt=0   # --- FIX 3: Use 'estimatedDelay' field ---
+        estimatedDelay__gt=0
     ).count()
     
     # 3. Upcoming flights
     upcoming_flights = TrackedFlight.objects.filter(
         user=user,
-        departureTime__gte=now # --- FIX 4: Use 'departureTime' field ---
+        departureTime__gte=now
     ).count()
     
     # 4. Assemble the data into a dictionary

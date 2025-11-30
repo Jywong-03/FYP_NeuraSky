@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -8,7 +8,7 @@ import { Switch } from './ui/switch';
 import { ScrollArea } from './ui/scroll-label';
 import { Bell, X, AlertTriangle, Info, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { API_BASE_URL } from '../config';
+import { api } from '../../utils/api';
 
 export function AlertNotifications() {
   // --- Alerts now start as an empty array
@@ -17,48 +17,17 @@ export function AlertNotifications() {
   // --- This state is fine, it's for user preference
   const [alertsEnabled, setAlertsEnabled] = useState(true);
 
-  // --- Helper function to get the auth token
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
-
-  // --- Helper function to make authenticated API calls
-  const apiFetch = useCallback(async (url, options = {}) => {
-    const token = getAuthToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`, // Or `Token ${token}`
-      ...options.headers,
-    };
-    
-    // --- We'll use a standard base URL for our API
-    const API_URL = `${API_BASE_URL}${url}`;
-    
-    const response = await fetch(API_URL, { ...options, headers });
-
-    if (!response.ok) {
-      // If auth fails, we could redirect to login, but for now just log it
-      console.error('API fetch failed:', response.status);
-      throw new Error('API request failed');
-    }
-    
-    if (response.status === 204) { // No Content
-      return null;
-    }
-    return response.json();
-  }, []);
-
-useEffect(() => {
+  useEffect(() => {
     async function fetchInitialAlerts() {
       try {
-        const initialAlerts = await apiFetch('/alerts/');
+        const initialAlerts = await api.get('/alerts/');
         setAlerts(initialAlerts || []);
       } catch (error) {
         console.error("Failed to fetch initial alerts:", error);
       }
     }
     fetchInitialAlerts();
-  }, [apiFetch]); // Runs once on mount
+  }, []); // Runs once on mount
 
   // --- This useEffect now POLLS for new alerts instead of faking them
   useEffect(() => {
@@ -70,7 +39,7 @@ useEffect(() => {
         // --- It's more efficient than fetching all alerts every time
         // --- We pass the ID of the "latest" alert we have
         const latestAlertId = alerts[0]?.id || 0;
-        const newAlerts = await apiFetch(`/alerts/new/?since=${latestAlertId}`);
+        const newAlerts = await api.get(`/alerts/new/?since=${latestAlertId}`);
         
         if (newAlerts && newAlerts.length > 0) {
           // Add new alerts to the top of the list
@@ -91,7 +60,7 @@ useEffect(() => {
     }, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
-  }, [alertsEnabled, alerts, apiFetch]);
+  }, [alertsEnabled, alerts]);
 
   const unreadCount = alerts.filter(a => !a.read).length;
 
@@ -102,10 +71,7 @@ useEffect(() => {
         alert.id === id ? { ...alert, read: true } : alert
       ));
       // Tell the backend
-      await apiFetch(`/alerts/mark-read/`, {
-        method: 'POST',
-        body: JSON.stringify({ id: id })
-      });
+      await api.post('/alerts/mark-read/', { id: id });
     } catch (error) {
       console.error("Failed to mark alert as read:", error);
       // --- If it fails, we could roll back the change, but this is simpler
@@ -117,7 +83,7 @@ useEffect(() => {
       // Optimistically update UI
       setAlerts(prev => prev.map(alert => ({ ...alert, read: true })));
       // Tell the backend
-      await apiFetch(`/alerts/mark-all-read/`, { method: 'POST' });
+      await api.post('/alerts/mark-all-read/');
     } catch (error) {
       console.error("Failed to mark all as read:", error);
     }
@@ -128,10 +94,7 @@ useEffect(() => {
       // Optimistically update UI
       setAlerts(prev => prev.filter(alert => alert.id !== id));
       // Tell the backend
-      await apiFetch(`/alerts/delete/`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id: id })
-      });
+      await api.delete('/alerts/delete/', { id: id });
     } catch (error) {
       console.error("Failed to delete alert:", error);
     }

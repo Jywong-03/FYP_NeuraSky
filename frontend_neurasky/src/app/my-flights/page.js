@@ -1,44 +1,22 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { MyFlights } from '../components/MyFlights'; // Import your component
+import { MyFlights } from '../components/MyFlights';
 import { useRouter } from 'next/navigation';
-import { API_BASE_URL } from '../config';
+import { api } from '../../utils/api';
 
 export default function MyFlightsPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // This function fetches the user's data (for the navigation bar)
   useEffect(() => {
     async function fetchUserData() {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        // This API call is for the user data in the nav bar
-        const response = await fetch(`${API_BASE_URL}/profile/`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-
-        const userData = await response.json();
+        const userData = await api.get('/profile/');
         setUser(userData);
-      
       } catch (error) {
         console.error(error.message);
-        localStorage.removeItem('authToken');
-        router.push('/login');
       } finally {
         setLoading(false);
       }
@@ -54,27 +32,8 @@ export default function MyFlightsPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const token = localStorage.getItem('authToken');
-      
-      if (refreshToken && token) {
-        await fetch(`${API_BASE_URL}/logout/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ refresh_token: refreshToken })
-        });
-      }
-    } catch (error) {
-      console.error('Logout failed', error);
-    } finally {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      router.push('/login');
-    }
+    await api.logout();
+    router.push('/login');
   };
 
   // --- Render Component ---

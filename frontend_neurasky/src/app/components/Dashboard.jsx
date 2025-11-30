@@ -61,18 +61,20 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
 
             return {
               id: originalId,
-              flightNumber: live.number,
+              flight_number: live.number, // Match FlightCard expectation (snake_case)
               airline: live.airline.name,
               destination: live.arrival.airport.name || live.arrival.airport.iata,
               origin: live.departure.airport.name || live.departure.airport.iata,
               
-              // [FIXED] Convert time strings to Date objects
-              departureTime: new Date(live.departure.scheduledTimeLocal),
-              arrivalTime: new Date(live.arrival.scheduledTimeLocal),
+              // Pass strings to avoid serialization issues and match FlightCard expectations
+              departureTime: live.departure.scheduledTimeLocal,
+              arrivalTime: live.arrival.scheduledTimeLocal,
+              date: live.departure.scheduledTimeLocal, // Use departure time as the date
 
               status: live.status ? live.status.toLowerCase().replace(/ /g, '-') : 'unknown',
-              estimatedDelay: live.departure.delayMinutes || 0,
-              delayReason: null, // Not provided by this API endpoint
+              // Fix access to delay minutes: departure.delay.minutes
+              estimatedDelay: live.departure?.delay?.minutes || 0,
+              delayReason: null,
               gate: live.departure.gate,
               terminal: live.departure.terminal
             };
@@ -80,7 +82,6 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
 
         setLiveFlights(fetchedFlights);
         setFilteredFlights(fetchedFlights);
-
       } catch (error) {
         console.error('Error fetching dashboard flights:', error);
         toast.error('Could not load dashboard flight data.');
