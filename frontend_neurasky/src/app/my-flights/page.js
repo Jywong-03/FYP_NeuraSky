@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { MyFlights } from '../components/MyFlights'; // Import your component
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../config';
 
 export default function MyFlightsPage() {
   const [user, setUser] = useState(null);
@@ -20,7 +21,7 @@ export default function MyFlightsPage() {
 
       try {
         // This API call is for the user data in the nav bar
-        const response = await fetch('http://127.0.0.1:8000/api/profile/', {
+        const response = await fetch(`${API_BASE_URL}/profile/`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -52,10 +53,28 @@ export default function MyFlightsPage() {
     router.push(`/${page}`);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      const token = localStorage.getItem('authToken');
+      
+      if (refreshToken && token) {
+        await fetch(`${API_BASE_URL}/logout/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+      }
+    } catch (error) {
+      console.error('Logout failed', error);
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      router.push('/login');
+    }
   };
 
   // --- Render Component ---

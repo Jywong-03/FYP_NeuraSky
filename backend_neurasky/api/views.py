@@ -11,6 +11,7 @@ from rest_framework import generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -18,9 +19,6 @@ from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
 from .serializers import RegisterSerializer,UserProfileSerializer,TrackedFlightSerializer, UserProfileSettingsSerializer, UserProfileSerializer, AlertSerializer, MyTokenObtainPairSerializer
 from .models import TrackedFlight, FlightHistory, UserProfile, Alert
-
-
-
 
 # Load the ML model and encoder when the server starts
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'api', 'flight_delay_model.joblib')
@@ -60,6 +58,19 @@ class DeleteUserView(APIView):
             return Response({"message": "Account deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+class LogoutView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh_token"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 # This creates the '/api/register/' endpoint
 class RegisterView(generics.CreateAPIView):

@@ -1,53 +1,28 @@
 'use client'
 
-// We need to import useState and useEffect
 import React, { useState, useEffect } from 'react'; 
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
-import { Clock, TrendingUp, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner'; // For error notifications
-import { Skeleton } from './ui/skeleton'; // For loading state
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Clock, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from './ui/skeleton';
+import { api } from '../../utils/api';
 
-const API_URL = 'http://127.0.0.1:8000/api';
-
-// Make sure to get 'authToken' from the props, as defined in page.js
-export function DelayDurationPage({ user, onNavigate, onLogout, authToken }) {
+export function DelayDurationPage({ user, onNavigate, onLogout }) {
   const [timeRange, setTimeRange] = useState('all-time');
-  
-  // --- NEW CODE ---
-  // 1. Add state for loading and chart data
   const [isLoading, setIsLoading] = useState(true);
   const [durationData, setDurationData] = useState([]);
-  // --- END NEW CODE ---
 
-  // --- NEW CODE ---
-  // 2. Add useEffect to fetch data from your new API endpoint
   useEffect(() => {
     const fetchData = async () => {
-      if (!authToken) {
-        setIsLoading(false);
-        return;
-      }
       setIsLoading(true);
       
       try {
-        const response = await fetch(`${API_URL}/analytics/delay-durations/`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch duration data');
-        }
-        
-        const data = await response.json();
-        setDurationData(data); // Set the data from your API
-        
+        const data = await api.get('/analytics/delay-durations/');
+        setDurationData(data);
       } catch (error) {
         toast.error(error.message);
       } finally {
@@ -56,127 +31,141 @@ export function DelayDurationPage({ user, onNavigate, onLogout, authToken }) {
     };
 
     fetchData();
-  }, [authToken, timeRange]); // Re-fetch if auth token or time range changes
-  // --- END NEW CODE ---
+  }, [timeRange]);
 
-  // ----- MOCK DATA IS NOW GONE -----
-
-  // Calculate stats from the *live data*
   const totalDelayedFlights = durationData.reduce((acc, item) => {
-    // Don't count "On-Time" as a "delayed" flight
     if (item.range !== 'On-Time') {
       return acc + item.flights;
     }
     return acc;
   }, 0);
   
-  // Find the most common range (ignoring on-time)
   const mostCommon = durationData.length > 1 
     ? durationData.filter(d => d.range !== 'On-Time').sort((a, b) => b.flights - a.flights)[0] 
     : { range: 'N/A', flights: 0 };
-    
-  const totalFlights = durationData.reduce((acc, item) => acc + item.flights, 0);
-  const mostCommonPercent = totalFlights > 0 ? ((mostCommon.flights / totalFlights) * 100).toFixed(0) : 0;
 
+  const totalFlights = durationData.reduce((acc, item) => acc + item.flights, 0);
+  const mostCommonPercent = totalDelayedFlights > 0 
+    ? ((mostCommon.flights / totalDelayedFlights) * 100).toFixed(1) 
+    : 0;
+    
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="fixed inset-0 -z-10 bg-ios-bg">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-400/20 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-400/10 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob animation-delay-2000" />
+      </div>
+
       <Navigation user={user} currentPage="delay-duration" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 flex items-center justify-between">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-sky-900 mb-2">Delay Duration Distribution</h1>
-            <p className="text-sky-700">Analysis of historical flight delay patterns</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#1E293B] mb-2">Delay Duration Distribution</h1>
+            <p className="text-[#64748B]">Analysis of historical flight delay patterns</p>
           </div>
           
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px] border-sky-200">
+            <SelectTrigger className="w-[180px] bg-white border-slate-200">
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-slate-200">
               <SelectItem value="all-time">All Time</SelectItem>
-              {/* You can add more time ranges later if you update your API */}
             </SelectContent>
           </Select>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="border-sky-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader className="pb-2">
-              <CardDescription>Total Delayed Flights</CardDescription>
-              <CardTitle className="text-sky-900">{isLoading ? <Skeleton className="h-8 w-24" /> : totalDelayedFlights}</CardTitle>
+              <CardDescription className="text-[#64748B]">Total Delayed Flights</CardDescription>
+              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-24" /> : totalDelayedFlights}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-sky-600">
+              <div className="flex items-center gap-2 text-[#64748B] text-sm">
                 <AlertCircle className="w-4 h-4" />
                 <span>Based on historical data</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-sky-100">
+          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <CardHeader className="pb-2">
-              <CardDescription>Total Flights Analyzed</CardDescription>
-              <CardTitle className="text-sky-900">{isLoading ? <Skeleton className="h-8 w-24" /> : totalFlights}</CardTitle>
+              <CardDescription className="text-[#64748B]">Total Flights Analyzed</CardDescription>
+              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-24" /> : totalFlights}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-sky-600">
+              <div className="flex items-center gap-2 text-[#64748B] text-sm">
                 <Clock className="w-4 h-4" />
                 <span>All recorded flights</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-sky-100">
+          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
             <CardHeader className="pb-2">
-              <CardDescription>Most Common Delay</CardDescription>
-              <CardTitle className="text-sky-900">{isLoading ? <Skeleton className="h-8 w-32" /> : mostCommon.range}</CardTitle>
+              <CardDescription className="text-[#64748B]">Most Common Delay</CardDescription>
+              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-32" /> : mostCommon.range}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge className="bg-sky-100 text-sky-800 border-sky-200">{mostCommonPercent}% of delays</Badge>
+              <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 border-blue-200/50">{mostCommonPercent}% of delays</Badge>
             </CardContent>
           </Card>
         </div>
 
         {/* Delay Duration Distribution Chart */}
-        <Card className="border-sky-100 mb-8">
+        <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
           <CardHeader>
-            <CardTitle className="text-sky-900">Delay Duration Breakdown</CardTitle>
-            <CardDescription>Distribution of delays across time ranges</CardDescription>
+            <CardTitle className="text-[#1E293B]">Delay Duration Breakdown</CardTitle>
+            <CardDescription className="text-[#64748B]">Distribution of delays across time ranges</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* --- NEW CODE --- */}
-            {/* 3. Add loading skeleton */}
             {isLoading ? (
               <div className="w-full h-[400px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (
-            // 4. Pass the *live data* to the chart
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={durationData}> {/* This now uses your state variable */}
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-                <XAxis dataKey="range" stroke="#0c4a6e" />
-                <YAxis stroke="#0c4a6e" />
+              <BarChart data={durationData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                <XAxis 
+                  dataKey="range" 
+                  stroke="#64748B" 
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="#64748B" 
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}`}
+                />
                 <Tooltip 
+                  cursor={{ fill: 'transparent' }}
                   contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #bae6fd',
-                    borderRadius: '8px'
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   }}
                 />
                 <Legend />
-                <Bar dataKey="flights" fill="#06b6d4" name="Number of Flights" radius={[8, 8, 0, 0]} />
+                <Bar 
+                  dataKey="flights" 
+                  fill="#007AFF" 
+                  name="Number of Flights" 
+                  radius={[4, 4, 0, 0]} 
+                  barSize={40}
+                />
               </BarChart>
             </ResponsiveContainer>
             )}
-            {/* --- END NEW CODE --- */}
           </CardContent>
         </Card>
-        
-        {/* Other charts are removed for simplicity, you can add them back later */}
-        
       </main>
     </div>
   );

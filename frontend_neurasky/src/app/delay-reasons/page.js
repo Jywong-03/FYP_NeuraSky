@@ -1,43 +1,24 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { DelayReasonsPage } from '../components/DelayReasonsPage'; // Import your component
+import { DelayReasonsPage } from '../components/DelayReasonsPage';
 import { useRouter } from 'next/navigation';
+import { api } from '../../utils/api';
 
 export default function DelayReasons() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // This function fetches the user's data (for the navigation bar)
   useEffect(() => {
     async function fetchUserData() {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        // This API call is for the user data in the nav bar
-        const response = await fetch('http://127.0.0.1:8000/api/profile/', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-
-        const userData = await response.json();
+        const userData = await api.get('/profile/');
         setUser(userData);
-      
       } catch (error) {
         console.error(error.message);
-        localStorage.removeItem('authToken');
-        router.push('/login');
+        // api.get handles 401 redirect, but if it fails for other reasons, we might want to redirect or show error
+        // For now, let's assume api.js handles the critical auth errors.
       } finally {
         setLoading(false);
       }
@@ -46,29 +27,25 @@ export default function DelayReasons() {
     fetchUserData();
   }, [router]);
 
-  // --- Navigation Functions ---
-  
   const handleNavigate = (page) => {
     router.push(`/${page}`);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
+  const handleLogout = async () => {
+    await api.logout();
     router.push('/login');
   };
-
-  // --- Render Component ---
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading analytics...</div>;
   }
 
+  // If loading is done but no user, api.js likely redirected to login. 
+  // But just in case:
   if (!user) {
-    return <div className="min-h-screen flex items-center justify-center">Redirecting to login...</div>;
+     return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>;
   }
 
-  // Render your DelayReasonsPage component
   return (
     <DelayReasonsPage 
       user={user} 

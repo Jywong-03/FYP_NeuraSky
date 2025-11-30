@@ -8,6 +8,7 @@ import { Switch } from './ui/switch';
 import { ScrollArea } from './ui/scroll-label';
 import { Bell, X, AlertTriangle, Info, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../config';
 
 export function AlertNotifications() {
   // --- Alerts now start as an empty array
@@ -31,7 +32,7 @@ export function AlertNotifications() {
     };
     
     // --- We'll use a standard base URL for our API
-    const API_URL = `http://127.0.0.1:8000/api${url}`;
+    const API_URL = `${API_BASE_URL}${url}`;
     
     const response = await fetch(API_URL, { ...options, headers });
 
@@ -199,9 +200,9 @@ useEffect(() => {
           variant="ghost"
           size="icon"
           onClick={() => setShowPanel(!showPanel)}
-          className="relative"
+          className="relative text-sky-700 hover:text-sky-900 hover:bg-sky-50"
         >
-          <Bell className="w-5 h-5 text-sky-700" />
+          <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs">
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -212,8 +213,8 @@ useEffect(() => {
 
       {/* Notification Panel */}
       {showPanel && (
-        <div className="fixed top-16 right-4 w-96 z-50 animate-in slide-in-from-top-5">
-          <Card className="border-sky-100 shadow-2xl">
+        <div className="fixed top-16 right-4 w-96 z-50 animate-in fade-in slide-in-from-top-5 duration-300">
+          <Card className="border-sky-100 shadow-2xl bg-white">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sky-900">Alerts & Notifications</CardTitle>
@@ -221,6 +222,7 @@ useEffect(() => {
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowPanel(false)}
+                  className="text-sky-700 hover:text-sky-900 hover:bg-sky-50"
                 >
                   <X className="w-4 h-4" />
                 </Button>

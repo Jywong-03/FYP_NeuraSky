@@ -56,26 +56,26 @@ export function FlightCard({ flight, onDelete }) {
   };
 
   return (
-    <Card className="border-sky-100 transition-all hover:shadow-md">
-      <CardContent className="p-4">
+    <Card className="mb-4 hover:shadow-md transition-shadow border-l-4 border-l-blue-500 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <CardContent className="p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           
           {/* Flight Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-sky-900 font-semibold">
+              <span className="text-[#1E293B] font-semibold text-lg">
                 {/* --- FIX 2: Add null check for flight_number --- */}
                 {flight.flight_number?.toUpperCase() || 'N/A'}
               </span>
               {getStatusBadge(flight.status)}
             </div>
-            <div className="flex items-center gap-2 text-sky-800">
-              <span className="font-medium">
+            <div className="flex items-center gap-2 text-[#64748B]">
+              <span className="font-medium text-[#1E293B]">
                 {/* --- FIX 3: Add null check for origin --- */}
                 {flight.origin?.toUpperCase() || 'N/A'}
               </span>
-              <ArrowRight className="w-4 h-4 text-sky-500" />
-              <span className="font-medium">
+              <ArrowRight className="w-4 h-4 text-[#007AFF]" />
+              <span className="font-medium text-[#1E293B]">
                 {/* --- FIX 4: Add null check for destination --- */}
                 {flight.destination?.toUpperCase() || 'N/A'}
               </span>
@@ -84,18 +84,18 @@ export function FlightCard({ flight, onDelete }) {
 
           {/* Time & Delay Info */}
           <div className="flex-1 mt-4 sm:mt-0 sm:text-right">
-            <div className="flex items-center sm:justify-end gap-2 text-sky-900 mb-2">
-              <Calendar className="w-4 h-4" />
+            <div className="flex items-center sm:justify-end gap-2 text-[#1E293B] mb-1">
+              <Calendar className="w-4 h-4 text-[#007AFF]" />
               <span>{formatDate(flight.date)}</span>
-              <Clock className="w-4 h-4 ml-2" />
+              <Clock className="w-4 h-4 ml-2 text-[#007AFF]" />
               <span>{formatTime(flight.departureTime)}</span>
             </div>
-            <div className="flex items-center sm:justify-end gap-2 text-red-600">
-              <Clock className="w-4 h-4" />
+            <div className="flex items-center sm:justify-end gap-2 text-red-500 font-medium">
+              {flight.estimatedDelay > 0 && <Clock className="w-4 h-4" />}
               <span>
                 {flight.estimatedDelay > 0
                   ? `Estimated ${flight.estimatedDelay} min delay`
-                  : 'No delay reported'}
+                  : <span className="text-green-600">On Time</span>}
               </span>
             </div>
           </div>
@@ -105,7 +105,7 @@ export function FlightCard({ flight, onDelete }) {
             <Button
               variant="ghost"
               size="icon"
-              className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+              className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
               onClick={onDelete}
             >
               <Trash2 className="w-4 h-4" />

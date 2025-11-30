@@ -9,25 +9,13 @@ import { DelayAnalytics } from './DelayAnalytics';
 import { Search, TrendingUp, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { Skeleton } from './ui/skeleton'; // Import Skeleton for loading
 import { toast } from 'sonner';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import { api } from '../../utils/api';
 
 // Helper function to get today's date in YYYY-MM-DD format
 function getTodayDate() {
   const today = new Date();
   return today.toISOString().split('T')[0];
 }
-
-// These are the default flights we'll show on the dashboard.
-// We just need the flight number and date to fetch their status.
-const defaultFlightsToTrack = [
-  { id: '1', flightNumber: 'AK6145', date: getTodayDate() },
-  // { id: '2', flightNumber: 'AK512', date: getTodayDate() },
-  // { id: '3', flightNumber: 'MH2611', date: getTodayDate() },
-  // { id: '4', flightNumber: 'CA484', date: getTodayDate() },
-  // { id: '5', flightNumber: 'FM866', date: getTodayDate() },
-  // { id: '6', flightNumber: 'MU5096', date: getTodayDate() },
-];
 
 export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,27 +25,28 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   const [filteredFlights, setFilteredFlights] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This hook will fetch live data for the default flights
+  // This hook will fetch live data for the user's tracked flights
   useEffect(() => {
     const fetchDashboardFlights = async () => {
-      if (!authToken) {
-        setIsLoading(false);
-        return;
-      }
-      
       setIsLoading(true);
 
       try {
-        // Create an array of fetch promises
-        const flightPromises = defaultFlightsToTrack.map(flight => {
-          return fetch(`${API_URL}/flight-status/${flight.flightNumber}/${flight.date}/`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`
-            }
-          })
-          .then(res => res.ok ? res.json() : null); // Return null if a fetch fails
+        // 1. Fetch the user's tracked flights first
+        const trackedFlights = await api.get('/flights/');
+
+        if (trackedFlights.length === 0) {
+          setLiveFlights([]);
+          setFilteredFlights([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. Create an array of fetch promises for live status
+        const flightPromises = trackedFlights.map(flight => {
+          // Use the date from the tracked flight, or today if missing
+          const date = flight.date || getTodayDate();
+          return api.get(`/flight-status/${flight.flight_number}/${date}/`)
+            .catch(() => null); // Return null if a fetch fails
         });
 
         // Wait for all fetches to complete
@@ -66,9 +55,12 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
         const fetchedFlights = results
           .filter(data => data) // Filter out any null (failed) results
           .map((live, index) => {
-            // Map the live API data to our FlightCard format
+            // Find the original tracked flight ID to keep keys consistent
+            // Note: The order of results matches the order of trackedFlights
+            const originalId = trackedFlights[index].id;
+
             return {
-              id: defaultFlightsToTrack[index].id,
+              id: originalId,
               flightNumber: live.number,
               airline: live.airline.name,
               destination: live.arrival.airport.name || live.arrival.airport.iata,
@@ -98,7 +90,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
     };
     
     fetchDashboardFlights();
-  }, [authToken]); // Re-fetch if auth token changes
+  }, []);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -125,10 +117,15 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
     : 0;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="fixed inset-0 -z-10 bg-ios-bg">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-400/20 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-400/10 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob animation-delay-2000" />
+      </div>
+
       <Navigation user={user} currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="mb-8">
           <h1 className="text-sky-900 mb-2">Flight Information Dashboard</h1>
           <p className="text-sky-700">Real-time flight status</p>
@@ -136,7 +133,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="border-sky-100">
+          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader className="pb-2">
               <CardDescription>Total Flights</CardDescription>
               <CardTitle className="text-sky-900">{totalFlights}</CardTitle>
@@ -146,7 +143,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
             </CardContent>
           </Card>
           
-          <Card className="border-sky-100">
+          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <CardHeader className="pb-2">
               <CardDescription>Delayed Flights</CardDescription>
               <CardTitle className="text-red-600">{delayedFlights}</CardTitle>
@@ -156,7 +153,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
             </CardContent>
           </Card>
           
-          <Card className="border-sky-100">
+          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
             <CardHeader className="pb-2">
               <CardDescription>On-Time Flights</CardDescription>
               <CardTitle className="text-green-600">{onTimeFlights}</CardTitle>
@@ -166,7 +163,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
             </CardContent>
           </Card>
           
-          <Card className="border-sky-100">
+          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
             <CardHeader className="pb-2">
               <CardDescription>Avg Delay</CardDescription>
               <CardTitle className="text-sky-900">{avgDelay} min</CardTitle>
@@ -176,21 +173,6 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
             </CardContent>
           </Card>
         </div>
-
-        {/* Search */}
-        <Card className="mb-8 border-sky-100">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-sky-400" />
-              <Input
-                placeholder="Search by flight number, destination, or airline..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 border-sky-200 focus:border-sky-400"
-              />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Delay Analytics - This now receives live data! */}
         <DelayAnalytics flights={liveFlights} />

@@ -20,9 +20,7 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { Skeleton } from './ui/skeleton';
-
-// --- FIX 1: API_URL moved *outside* the component ---
-const API_URL = 'http://127.0.0.1:8000/api';
+import { api } from '../../utils/api';
 
 export function AccountSettings({ user, onNavigate, onLogout }) {
   
@@ -33,26 +31,10 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // --- API_URL constant removed from here ---
-
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
-
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const token = getAuthToken();
-        const response = await fetch(`${API_URL}/profile/settings/`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Failed to load settings');
-        }
-        const data = await response.json();
+        const data = await api.get('/profile/settings/');
         setSettings(data);
       } catch (error) {
         toast.error('Failed to load settings');
@@ -62,7 +44,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
     };
 
     fetchSettings();
-  }, []); // --- FIX 2: Dependency array is now empty ---
+  }, []);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -72,25 +54,10 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
     }
     
     try {
-      const token = getAuthToken();
-      // --- FIX 3: Corrected API URL (was /change-password/, should be /profile/change-password/)
-      const response = await fetch(`${API_URL}/profile/change-password/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword: currentPassword, // --- FIX 4: Send currentPassword (not current_password) ---
-          newPassword: newPassword, // --- FIX 5: Send newPassword (not new_password) ---
-        })
+      await api.post('/profile/change-password/', {
+        currentPassword: currentPassword,
+        newPassword: newPassword,
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        // Use data.error from the backend response
-        throw new Error(data.error || 'Failed to change password');
-      }
       
       toast.success('Password changed successfully');
       setCurrentPassword('');
@@ -103,19 +70,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
 
   const handleDeleteAccount = async () => {
     try {
-      const token = getAuthToken();
-      // --- FIX 6: Corrected API URL (was /delete-account/, should be /profile/delete/) ---
-      const response = await fetch(`${API_URL}/profile/delete/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete account');
-      }
+      await api.delete('/profile/delete/');
       
       toast.success('Account deleted successfully');
       onLogout(); // Log the user out
@@ -128,19 +83,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
     setSettings(prev => ({ ...prev, [key]: value }));
 
     try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_URL}/profile/settings/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ [key]: value })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update settings');
-      }
+      await api.patch('/profile/settings/', { [key]: value });
       toast.success('Notification settings updated');
     } catch (error) {
       toast.error(error.message);
@@ -149,21 +92,25 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
   };
 
   return (
-    <>
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="fixed inset-0 -z-10 bg-ios-bg">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-400/20 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-400/10 rounded-full blur-3xl opacity-50 pointer-events-none" />
+      </div>
+
       <Navigation user={user} currentPage="settings" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="mb-8">
-          <h1 className="text-sky-900 mb-2">Settings</h1>
-          <p className="text-sky-700">Manage your account and preferences</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-[#1E293B] mb-2">Settings</h1>
+          <p className="text-[#64748B]">Manage your account and preferences</p>
         </div>
 
         <div className="space-y-6">
           
-          {/* --- Loading Skeleton (shows when settingsLoading is true) --- */}
           {settingsLoading && (
             <>
-              <Card className="border-sky-100">
+              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardHeader>
                   <Skeleton className="h-6 w-1/2" />
                   <Skeleton className="h-4 w-1/3" />
@@ -187,7 +134,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="border-sky-100">
+              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
                 <CardHeader>
                   <Skeleton className="h-6 w-1/2" />
                 </CardHeader>
@@ -201,7 +148,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   <Skeleton className="h-10 w-32" />
                 </CardContent>
               </Card>
-              <Card className="border-red-200">
+              <Card className="border-red-200/50 bg-red-50/50 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
                 <CardHeader>
                   <Skeleton className="h-6 w-1/2" />
                   <Skeleton className="h-4 w-2/3" />
@@ -213,19 +160,18 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
             </>
           )}
 
-          {/* --- Actual Content (shows when settingsLoading is false and settings exist) --- */}
           {!settingsLoading && settings && (
             <>
-              <Card className="border-sky-100">
+              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardHeader>
-                  <CardTitle className="text-sky-900">Notification Preferences</CardTitle>
-                  <CardDescription>Control how you receive alerts</CardDescription>
+                  <CardTitle className="text-[#1E293B]">Notification Preferences</CardTitle>
+                  <CardDescription className="text-[#64748B]">Control how you receive alerts</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sky-900">Email Notifications</p>
-                      <p className="text-sky-600">Receive alerts via email</p>
+                      <p className="text-[#1E293B] font-medium">Email Notifications</p>
+                      <p className="text-sm text-[#64748B]">Receive alerts via email</p>
                     </div>
                     <Switch
                       id="email-notifications"
@@ -235,8 +181,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sky-900">Push Notifications</p>
-                      <p className="text-sky-600">Receive alerts on your device</p>
+                      <p className="text-[#1E293B] font-medium">Push Notifications</p>
+                      <p className="text-sm text-[#64748B]">Receive alerts on your device</p>
                     </div>
                     <Switch
                       id="push-notifications"
@@ -246,8 +192,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sky-900">Delay Alerts</p>
-                      <p className="text-sky-600">Notify me about flight delays</p>
+                      <p className="text-[#1E293B] font-medium">Delay Alerts</p>
+                      <p className="text-sm text-[#64748B]">Notify me about flight delays</p>
                     </div>
                     <Switch
                       id="delay-alerts"
@@ -257,8 +203,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sky-900">Weekly Digest</p>
-                      <p className="text-sky-600">A summary of your flight activity</p>
+                      <p className="text-[#1E293B] font-medium">Weekly Digest</p>
+                      <p className="text-sm text-[#64748B]">A summary of your flight activity</p>
                     </div>
                     <Switch
                       id="weekly-digest"
@@ -269,58 +215,61 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                 </CardContent>
               </Card>
 
-              <Card className="border-sky-100">
+              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
                 <CardHeader>
-                  <CardTitle className="text-sky-900">Change Password</CardTitle>
+                  <CardTitle className="text-[#1E293B]">Change Password</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handlePasswordChange} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="current-password">Current Password</Label>
+                      <Label htmlFor="current-password" className="text-[#1E293B]">Current Password</Label>
                       <Input
                         id="current-password"
                         type="password"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         required
+                        className="bg-white/50"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="new-password">New Password</Label>
+                      <Label htmlFor="new-password" className="text-[#1E293B]">New Password</Label>
                       <Input
                         id="new-password"
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
+                        className="bg-white/50"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Label htmlFor="confirm-password" className="text-[#1E293B]">Confirm New Password</Label>
                       <Input
                         id="confirm-password"
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
+                        className="bg-white/50"
                       />
                     </div>
-                    <Button type="submit" className="bg-sky-600 hover:bg-sky-700">
+                    <Button type="submit" className="bg-[#007AFF] hover:bg-[#007AFF]/90 text-white">
                       Update Password
                     </Button>
                   </form>
                 </CardContent>
               </Card>
 
-              <Card className="border-red-200">
+              <Card className="border-red-200 bg-red-50 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
                 <CardHeader>
-                  <CardTitle className="text-red-900">Delete Account</CardTitle>
+                  <CardTitle className="text-red-600">Delete Account</CardTitle>
                   <CardDescription>Permanently delete your account and all associated data.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive">Delete Account</Button>
+                      <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white shadow-sm">Delete Account</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
@@ -342,10 +291,9 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
               </Card>
             </>
           )} 
-          {/* --- FIX 7: This is the correct place for the closing bracket --- */}
 
         </div>
       </main>
-    </>
+    </div>
   );
 }

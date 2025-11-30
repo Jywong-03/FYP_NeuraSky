@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { LoginPage } from '../components/LoginPage'; // Import the "dumb" component
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { api } from '../../utils/api';
 
 export default function Login() {
   const [error, setError] = useState('');
@@ -13,28 +14,7 @@ export default function Login() {
   const handleLogin = async (email, password) => {
     setError(''); // Clear old errors
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/token/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email, // Send email
-          password: password,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Login failed. Please check your credentials.');
-      }
-
-      const data = await response.json();
-      
-      // THIS IS THE MOST IMPORTANT STEP
-      localStorage.setItem('authToken', data.access); // Save the token!
-      
-      // We can also save the refresh token
-      localStorage.setItem('refreshToken', data.refresh);
+      await api.login(email, password);
 
       toast.success("Login Successful!", {
         description: "Redirecting to your profile...",

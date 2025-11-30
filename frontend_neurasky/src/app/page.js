@@ -11,9 +11,8 @@ import { DelayDurationPage } from './components/DelayDurationPage';
 import { DelayReasonsPage } from './components/DelayReasonsPage';
 import { HistoricalTrendsPage } from './components/HistoricalTrendsPage';
 import { useRouter } from 'next/navigation';
-import { Toaster } from './components/ui/sonner';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import { toast } from 'sonner';
+import { API_BASE_URL } from './config';
 
 export default function App() {
   const router = useRouter();
@@ -45,7 +44,7 @@ export default function App() {
 
   const fetchUserProfile = async (token) => {
     try {
-      const response = await fetch(`${API_URL}/profile/`, {
+      const response = await fetch(`${API_BASE_URL}/profile/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +72,7 @@ export default function App() {
 
   const handleLogin = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/login/`, {
+      const response = await fetch(`${API_BASE_URL}/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +83,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        // You can add a toast notification here
+        toast.error('Login failed. Please check your credentials.');
         console.error('Login failed');
         return;
       }
@@ -95,6 +94,7 @@ export default function App() {
 
       // Now that we have a token, fetch the user's profile
       await fetchUserProfile(data.access);
+      toast.success('Login successful! Welcome back.');
 
     } catch (error) {
       console.error('An error occurred:', error);
@@ -103,7 +103,7 @@ export default function App() {
 
   const handleRegister = async (name, email, password) => {
     try {
-      const response = await fetch(`${API_URL}/register/`, {
+      const response = await fetch(`${API_BASE_URL}/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,11 +116,13 @@ export default function App() {
       });
 
       if (!response.ok) {
+        toast.error('Registration failed. Please try again.');
         console.error('Registration failed');
         return;
       }
 
       // After registering, automatically log them in
+      toast.success('Registration successful! Logging you in...');
       await handleLogin(email, password);
 
     } catch (error) {
@@ -128,10 +130,31 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setAuthToken(null); // Clear the token
-    setCurrentPage('login');
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      const token = localStorage.getItem('authToken');
+      
+      if (refreshToken && token) {
+        await fetch(`${API_BASE_URL}/logout/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+      }
+    } catch (error) {
+      console.error('Logout failed', error);
+    } finally {
+      setUser(null);
+      setAuthToken(null);
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      setCurrentPage('login');
+      toast.success('Logged out successfully');
+    }
   };
 
   if (!user && currentPage !== 'register') {
@@ -141,7 +164,6 @@ export default function App() {
           onLogin={handleLogin} 
           onSwitchToRegister={() => setCurrentPage('register')}
         />
-        <Toaster />
       </>
     );
   }
@@ -153,7 +175,6 @@ export default function App() {
           onRegister={handleRegister}
           onSwitchToLogin={() => setCurrentPage('login')}
         />
-        <Toaster />
       </>
     );
   }
@@ -162,7 +183,6 @@ export default function App() {
   
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-sky-50 to-cyan-50">
-      <Toaster />
       
       {currentPage === 'dashboard' && (
         <Dashboard 

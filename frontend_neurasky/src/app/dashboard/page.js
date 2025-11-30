@@ -3,41 +3,32 @@
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from '../components/Dashboard'; // Import your component
 import { useRouter } from 'next/navigation';
+import { api } from '../../utils/api';
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
   const router = useRouter();
 
   // This function fetches the user's data
   useEffect(() => {
     async function fetchUserData() {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/profile/', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          // If the token is bad (e.g., expired), go to login
-          throw new Error('Failed to fetch user data');
+        // We don't need to manually check for token here, api.get will handle 401
+        // But we might want to check if we have a token at all to avoid unnecessary calls
+        const localToken = localStorage.getItem('authToken');
+        if (!localToken) {
+           router.push('/login');
+           return;
         }
+        setToken(localToken);
 
-        const userData = await response.json();
+        const userData = await api.get('/profile/');
         setUser(userData);
-      
       } catch (error) {
         console.error(error.message);
-        localStorage.removeItem('authToken'); // Clean up bad token
-        router.push('/login');
+        // If api.get failed and didn't redirect (e.g. network error), we might want to handle it
       } finally {
         setLoading(false);
       }
@@ -53,9 +44,8 @@ export default function DashboardPage() {
     router.push(`/${page}`);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
+  const handleLogout = async () => {
+    await api.logout();
     router.push('/login');
   };
 
@@ -75,6 +65,7 @@ export default function DashboardPage() {
   return (
     <Dashboard 
       user={user} 
+      authToken={token}
       onNavigate={handleNavigate}
       onLogout={handleLogout}
     />

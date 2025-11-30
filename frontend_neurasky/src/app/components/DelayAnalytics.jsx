@@ -52,7 +52,7 @@ flights.forEach(flight => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <Card className="border-sky-100">
+      <Card className="border-sky-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <CardHeader>
           <CardTitle className="text-sky-900">Delay Duration Distribution</CardTitle>
           <CardDescription>Breakdown of delays by time ranges</CardDescription>
@@ -76,7 +76,7 @@ flights.forEach(flight => {
         </CardContent>
       </Card>
 
-      <Card className="border-sky-100">
+      <Card className="border-sky-100 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
         <CardHeader>
           <CardTitle className="text-sky-900">Flight Status Breakdown</CardTitle>
           <CardDescription>Live status of your tracked flights</CardDescription>
