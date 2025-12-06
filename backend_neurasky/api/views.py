@@ -112,90 +112,27 @@ class TrackedFlightView(generics.ListCreateAPIView):
         return TrackedFlight.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # 1. Save the basic info *temporarily*
+        # 1. Save the basic info
         tracked_flight = serializer.save(user=self.request.user)
 
-        flight_number = tracked_flight.flight_number
-        date = tracked_flight.date.strftime('%Y-%m-%d')
-
-        url = f"https://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
-        headers = {
-            "X-RapidAPI-Key": os.getenv('RAPIDAPI_KEY'),
-            "X-RapidAPI-Host": "aerodatabox.p.rapidapi.com"
-        }
-        querystring = {"withAircraft":"true", "withLocation":"true"}
-
-        try:
-            response = requests.get(url, headers=headers, params=querystring)
-            response.raise_for_status() # This will raise HTTPError for 4xx/5xx
-            data = response.json()
-
-            if data and len(data) > 0:
-                flight_data = data[0]
-                
-                # 3. Update the 'tracked_flight' object with real data
-                tracked_flight.status = flight_data.get('status', 'Unknown')
-                
-                if flight_data.get('departure', {}).get('airport', {}):
-                    tracked_flight.origin = flight_data['departure']['airport'].get('iata', 'N/A')
-                
-                if flight_data.get('arrival', {}).get('airport', {}):
-                    tracked_flight.destination = flight_data['arrival']['airport'].get('iata', 'N/A')
-
-                delay_minutes = 0
-                if flight_data.get('departure') and flight_data['departure'].get('delay', {}):
-                    delay_minutes = flight_data['departure']['delay'].get('minutes', 0)
-                
-                tracked_flight.estimatedDelay = delay_minutes
-
-                if flight_data.get('departure') and flight_data['departure'].get('scheduledTimeLocal'):
-                    tracked_flight.departureTime = flight_data['departure']['scheduledTimeLocal']
-                
-                # 4. Re-save the object *now that it has all data*
-                tracked_flight.save()
-
-                # 5. Save to history
-                airline_name = "Unknown"
-                if flight_data.get('airline', {}).get('name'):
-                    airline_name = flight_data['airline']['name']
-
-                # --- THIS IS THE FIX ---
-                # The FlightHistory model does not have 'user' or 'departure_time' fields.
-                FlightHistory.objects.create(
-                    flight_number=tracked_flight.flight_number,
-                    airline=airline_name, 
-                    status=tracked_flight.status,
-                    delay_minutes=tracked_flight.estimatedDelay
-                    # departure_time=tracked_flight.departureTime <-- Removed
-                    # user=self.request.user, <-- Removed
-                )
-                # --- END OF FIX ---
-            
-            else:
-                # Handle when flight is not found by API
-                tracked_flight.delete() # Delete the temporary object
-                raise serializers.ValidationError('Flight not found. Please check the flight number and date.')
-
-        except requests.exceptions.HTTPError as e:
-            # Handle API errors (like bad key or flight not found)
-            tracked_flight.delete() # Delete the temporary object
-            if e.response.status_code == 401 or e.response.status_code == 403:
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                print("RAPIDAPI KEY IS INVALID OR QUOTA EXCEEDED. CHECK .env FILE")
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                raise serializers.ValidationError('Could not fetch flight data. Server configuration error.')
-            elif e.response.status_code == 429:
-                 raise serializers.ValidationError('API quota exceeded. Please try again later.')
-            else:
-                raise serializers.ValidationError(f'Flight not found or invalid date. (Error: {e.response.status_code})')
+        # 2. Simulate User Input / Default Values if missing
+        # Since we are "Simulating", we trust the user input or defaults
+        if not tracked_flight.status:
+            tracked_flight.status = "Scheduled"
         
-        except Exception as e:
-            # Handle all other errors
-            tracked_flight.delete() # Delete the temporary object
-            print(f"An unknown error occurred: {e}")
-            # --- THIS IS THE FIX ---
-            # We now raise the *actual* Python error message
-            raise serializers.ValidationError(f'An unknown error occurred: {e}')
+        if not tracked_flight.estimatedDelay:
+            tracked_flight.estimatedDelay = 0
+            
+        tracked_flight.save()
+
+        # 3. Create a history entry (optional, but good for consistency)
+        FlightHistory.objects.create(
+            flight_number=tracked_flight.flight_number,
+            airline=tracked_flight.flight_number[:2], # Heuristic
+            status=tracked_flight.status,
+            delay_minutes=tracked_flight.estimatedDelay,
+            recorded_at=timezone.now()
+        )
 
 class FlightStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -285,14 +222,12 @@ class DelayReasonsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # Query the database, group by 'status', and count 'id's
-        status_counts = TrackedFlight.objects.filter(user=request.user) \
-                                             .values('status') \
+        # Query the FlightHistory database for global stats
+        status_counts = FlightHistory.objects.values('status') \
                                              .annotate(value=Count('id')) \
                                              .order_by('-value')
 
         # Format the data for the pie chart
-        # The frontend component capitalizes and handles nulls, but let's clean it
         formatted_data = []
         for item in status_counts:
             status = item['status']
@@ -313,9 +248,10 @@ class DelayDurationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        flights = TrackedFlight.objects.filter(user=request.user)
+        # Use FlightHistory for global duration stats
+        flights = FlightHistory.objects.all()
 
-        # Initialize the buckets as expected by the frontend
+        # Initialize the buckets
         duration_data = {
             "On-Time": 0,
             "1-30 min": 0,
@@ -323,24 +259,20 @@ class DelayDurationView(APIView):
             "60+ min": 0,
         }
 
-        for flight in flights:
-            delay = flight.estimatedDelay or 0 # Default null delays to 0
-
-            if delay <= 0:
-                duration_data["On-Time"] += 1
-            elif delay <= 30:
-                duration_data["1-30 min"] += 1
-            elif delay <= 60:
-                duration_data["30-60 min"] += 1
-            else:
-                duration_data["60+ min"] += 1
+        # We can optimize this with database aggregation, but for now iteration is fine for 100k rows
+        # Or better, let's use aggregation for performance
+        
+        on_time = flights.filter(delay_minutes__lte=0).count()
+        delay_1_30 = flights.filter(delay_minutes__gt=0, delay_minutes__lte=30).count()
+        delay_30_60 = flights.filter(delay_minutes__gt=30, delay_minutes__lte=60).count()
+        delay_60_plus = flights.filter(delay_minutes__gt=60).count()
 
         # Format as a list of objects for the chart
         formatted_data = [
-            {"range": "On-Time", "flights": duration_data["On-Time"]},
-            {"range": "1-30 min", "flights": duration_data["1-30 min"]},
-            {"range": "30-60 min", "flights": duration_data["30-60 min"]},
-            {"range": "60+ min", "flights": duration_data["60+ min"]},
+            {"range": "On-Time", "flights": on_time},
+            {"range": "1-30 min", "flights": delay_1_30},
+            {"range": "30-60 min", "flights": delay_30_60},
+            {"range": "60+ min", "flights": delay_60_plus},
         ]
 
         return Response(formatted_data)
@@ -349,32 +281,24 @@ class HistoricalTrendsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # NOTE: This assumes you have a DateTimeField named 'departureTime'
-        # on your TrackedFlight model. If not, use 'created_at' or another date.
-        # We also filter out null delays from the average.
-
-        # This logic uses FlightHistory, which you imported but didn't use
-        # If you are saving history there, use that. I'll use TrackedFlight for now.
-
-        monthly_data = TrackedFlight.objects.filter(
-            user=request.user, 
-            departureTime__isnull=False,
-            estimatedDelay__isnull=False
-        ) \
-        .annotate(month=TruncMonth('departureTime')) \
-        .values('month') \
-        .annotate(avgDelay=Avg('estimatedDelay')) \
-        .values('month', 'avgDelay') \
-        .order_by('month')
+        # Query FlightHistory for global trends
+        # We group by month of 'recorded_at'
+        monthly_data = FlightHistory.objects.annotate(
+            month=TruncMonth('recorded_at')
+        ).values('month').annotate(
+            avgDelay=Avg('delay_minutes'),
+            totalDelays=Count('id')
+        ).order_by('month')
 
         # Format for the frontend
-        formatted_data = [
-            {
-                "month": item['month'].strftime('%Y-%m'), # Format as "YYYY-MM"
-                "avgDelay": round(item['avgDelay'], 1)   # Round to 1 decimal place
-            } 
-            for item in monthly_data
-        ]
+        formatted_data = []
+        for item in monthly_data:
+            if item['month']: # Ensure month is not None
+                formatted_data.append({
+                    "month": item['month'].strftime('%Y-%m'),
+                    "avgDelay": round(item['avgDelay'] or 0, 1),
+                    "totalDelays": item['totalDelays']
+                })
 
         return Response(formatted_data)
     
@@ -424,7 +348,7 @@ def flight_stats_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_alerts(request):
-    alerts = Alert.objects.filter(user=request.user)
+    alerts = Alert.objects.filter(user=request.user).order_by('-timestamp')
     serializer = AlertSerializer(alerts, many=True)
     return Response(serializer.data)
 
@@ -436,10 +360,37 @@ def get_new_alerts(request):
     # The frontend sends this as a query parameter: ?since=123
     since_id = request.query_params.get('since', 0)
     
+    # --- LAZY ALERT GENERATION ---
+    # Check for delayed flights and generate alerts if they don't exist
+    user_flights = TrackedFlight.objects.filter(user=request.user)
+    for flight in user_flights:
+        # If delay is significant (> 15 mins)
+        if flight.estimatedDelay and flight.estimatedDelay > 15:
+            # Check if we already alerted for this specific flight
+            # We use flight_number and date to be specific
+            already_alerted = Alert.objects.filter(
+                user=request.user,
+                flightNumber=flight.flight_number,
+                type='delay',
+                # You might want to add a date check here too if you store it in Alert
+                # For now, we assume one active alert per flight number is enough
+            ).exists()
+            
+            if not already_alerted:
+                Alert.objects.create(
+                    user=request.user,
+                    title=f"Flight {flight.flight_number} Delayed",
+                    message=f"Your flight to {flight.destination} is delayed by {flight.estimatedDelay} minutes.",
+                    type='delay',
+                    severity='high',
+                    flightNumber=flight.flight_number
+                )
+    
     alerts = Alert.objects.filter(
         user=request.user,
         id__gt=since_id  # Get all alerts with an ID greater than the one user has
-    )
+    ).order_by('-timestamp')
+    
     serializer = AlertSerializer(alerts, many=True)
     return Response(serializer.data)
 

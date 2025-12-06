@@ -42,6 +42,15 @@ export function Navigation({ user, currentPage, onNavigate, onLogout }) {
                 <Clock className="w-4 h-4 mr-2" />
                 My Flights
               </Button>
+
+              <Button
+                variant={currentPage === 'predict' ? 'default' : 'ghost'}
+                onClick={() => onNavigate('predict')}
+                className={currentPage === 'predict' ? 'bg-linear-to-r from-blue-500 to-cyan-500 text-white' : 'text-sky-700 hover:text-sky-900 hover:bg-sky-50'}
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Predict Flight
+              </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

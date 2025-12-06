@@ -1,6 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User # Import Django's built-in User
-from django.db.models.signals import post_save # --- Add these imports for the signal ---
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 # Stores flights saved by users from the 'MyFlights.jsx' page
@@ -9,15 +9,20 @@ class TrackedFlight(models.Model):
     flight_number = models.CharField(max_length=10)
     date = models.DateField(null=True, blank=True)
     
-    # --- ADD/CHECK THESE FIELDS ---
-    # These will be filled in by the API
     status = models.CharField(max_length=50, null=True, blank=True)
     estimatedDelay = models.IntegerField(null=True, blank=True)
     departureTime = models.DateTimeField(null=True, blank=True)
     
-    # Add other fields you want to save
     origin = models.CharField(max_length=10, null=True, blank=True)
     destination = models.CharField(max_length=10, null=True, blank=True)
+
+    # Flighty-like features
+    inbound_flight_number = models.CharField(max_length=10, null=True, blank=True)
+    inbound_origin = models.CharField(max_length=10, null=True, blank=True)
+    gate = models.CharField(max_length=10, null=True, blank=True)
+    terminal = models.CharField(max_length=10, null=True, blank=True)
+    baggage_claim = models.CharField(max_length=10, null=True, blank=True)
+    aircraft_type = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.flight_number} on {self.date}"
@@ -29,10 +34,8 @@ class FlightHistory(models.Model):
     status = models.CharField(max_length=50)
     delay_minutes = models.IntegerField(default=0)
 
-    # We can add more fields later if we want (e.g., delay_reason)
-
-    # This will automatically add the date and time when we save a record
-    recorded_at = models.DateTimeField(auto_now_add=True)
+    # CHANGED: Removed auto_now_add=True to allow importing historical data
+    recorded_at = models.DateTimeField()
 
     def __str__(self):
         return f"{self.flight_number} on {self.recorded_at.date()} - Status: {self.status}"
@@ -47,46 +50,31 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
-# --- NEW SIGNAL ---
-# This function creates a UserProfile automatically when a new User is created
+# --- SIGNALS ---
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
 
-# This function saves the profile when the user is saved
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    # This check prevents it from crashing on existing users
     if not hasattr(instance, 'profile'):
         UserProfile.objects.create(user=instance)
     else:
         instance.profile.save()
 
 class Alert(models.Model):
-    # Link the alert to a specific user
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="alerts")
-    
-    # These fields match the component's state
     title = models.CharField(max_length=100)
     message = models.TextField()
     read = models.BooleanField(default=False)
-    
-    # We use 'timestamp' to match the frontend
     timestamp = models.DateTimeField(auto_now_add=True) 
-    
-    # Store the alert "type" (e.g., 'delay', 'gate-change')
     type = models.CharField(max_length=50, default='info')
-    
-    # Store the "severity" (e.g., 'high', 'medium', 'low')
     severity = models.CharField(max_length=50, default='low')
-    
-    # Store the related flight number, but allow it to be blank
     flightNumber = models.CharField(max_length=20, blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
     
     class Meta:
-        # Show newest alerts first by default
         ordering = ['-timestamp']

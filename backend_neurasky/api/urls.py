@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_predict
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -39,7 +40,7 @@ urlpatterns = [
 
     # ML Prediction Endpoint
     path('predict/', 
-        views.PredictionView.as_view(), 
+        views_predict.predict_delay, 
         name='predict-flight'),
 
     path('alerts/', views.get_all_alerts, name='get-all-alerts'),

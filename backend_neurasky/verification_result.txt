@@ -1,0 +1,3 @@
+SUCCESS: Alert generated for flight TEST999
+Alert Title: Flight TEST999 Delayed
+Alert Message: Your flight to JFK is delayed by 20 minutes.
