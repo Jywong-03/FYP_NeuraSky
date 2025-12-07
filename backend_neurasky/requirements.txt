@@ -1,0 +1,11 @@
+Django>=5.0
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+mysql-connector-python
+python-dotenv
+joblib
+scikit-learn
+numpy
+pandas
+cryptography

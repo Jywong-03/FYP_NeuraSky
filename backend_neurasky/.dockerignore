@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Python Cache and Bytecode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments (ignore local venv if you have one)
+env
+venv
+.venv
+
+# Environment Variables (Secrets should not be baked into the image)
+.env
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints
+
+# IDE Settings
+.vscode
+.idea
+
+# Database (Ignore local sqlite if it exists, since you use MySQL)
+*.sqlite3
+
+# Logs
+*.log
+
+# Static files (collected locally)
+staticfiles
