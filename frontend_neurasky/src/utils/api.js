@@ -74,7 +74,10 @@ const fetchWithAuth = async (endpoint, options = {}) => {
 
   // Return null for 204 No Content, otherwise JSON
   if (response.status === 204) return null;
-  return response.json();
+
+  // Check if there is content before trying to parse JSON
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
 };
 
 export const api = {

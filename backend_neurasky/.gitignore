@@ -1,7 +1,7 @@
 # Ignore environment variables
 backend_neurasky/.env
 
-
+.env/
 # Ignore Python cache
 __pycache__/
 *.pyc
