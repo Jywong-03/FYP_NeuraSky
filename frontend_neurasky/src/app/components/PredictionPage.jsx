@@ -215,8 +215,13 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
                               </span>
                             )}
                           </CardTitle>
-                          <CardDescription className="text-base mt-1">
-                            Confidence: <span className="font-semibold text-sky-700">{result.confidence}</span>
+                          <CardDescription className="text-base mt-1 flex items-center gap-3">
+                            <span>Confidence: <span className="font-semibold text-sky-700">{result.confidence}</span></span>
+                            {result.model_info && result.model_info.accuracy && (
+                              <span className="bg-sky-100 text-sky-800 text-xs px-2 py-0.5 rounded-full border border-sky-200" title="Based on testing with 65,000 recent flights">
+                                Model Accuracy: {(parseFloat(result.model_info.accuracy) * 100).toFixed(1)}%
+                              </span>
+                            )}
                           </CardDescription>
                         </div>
                         <div className="text-right">

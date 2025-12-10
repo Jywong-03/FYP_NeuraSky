@@ -1,0 +1,34 @@
+FLIGHT DELAY PREDICTION MODEL METRICS
+==================================================
+
+Training Date: 2025-12-11 01:10:14
+Dataset Size: 65,000 flights
+
+PERFORMANCE METRICS:
+Accuracy:  86.70%
+Precision: 0.8277
+Recall:    0.9555
+F1-Score:  0.8870
+ROC-AUC:   0.9667
+
+CLASS DISTRIBUTION:
+On-Time:  29,477 (45.3%)
+Delayed:  35,523 (54.7%)
+
+CONFUSION MATRIX:
+True Negatives:  4,482
+False Positives: 1,413
+False Negatives: 316
+True Positives:  6,789
+
+TOP 10 FEATURES:
+Month               : 229854.3209
+IsPeakHour          : 152831.1740
+Operating_Airline   : 101136.2381
+Origin              : 77669.4542
+Dest                : 73156.8587
+Distance            : 71068.3449
+Hour                : 20582.5912
+CRSDepTime          : 18572.9560
+IsInternational     : 4923.1163
+DayOfWeek           : 1869.0560
