@@ -43,13 +43,13 @@ module.exports = {
           foreground: 'hsl(var(--card-foreground))',
         },
         // iOS Specific Colors
-        ios: {
-          bg: '#2563EB',
-          card: 'rgba(255, 255, 255, 0.72)',
-          glass: 'rgba(255, 255, 255, 0.65)',
-          blue: '#007AFF',
-          gray: '#8E8E93',
-          light: '#F2F2F7',
+        // Digital Iconic Specific Colors
+        digital: {
+          neon: 'hsl(180 100% 50%)', // Electric Cyan
+          purple: 'hsl(280 100% 60%)',
+          pink: 'hsl(320 100% 60%)',
+          glass: 'rgba(15, 23, 42, 0.7)', // Dark glass
+          'glass-border': 'rgba(255, 255, 255, 0.1)',
         }
       },
       borderRadius: {

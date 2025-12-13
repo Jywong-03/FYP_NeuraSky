@@ -46,44 +46,51 @@ export function HistoricalTrendsPage({ user, onNavigate, onLogout }) {
     : 0;
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="fixed inset-0 -z-10 bg-ios-bg">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-400/20 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob" />
-        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-400/10 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob animation-delay-2000" />
-      </div>
+    <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
+      <div className="fixed inset-0 -z-10 bg-background" />
 
       <Navigation user={user} currentPage="historical-trends" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Corporate Hero Header */}
+      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#1E293B] mb-2">Historical Delay Trends</h1>
-            <p className="text-[#64748B]">Historical delay patterns from your collected data</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
+               <Activity className="w-8 h-8" />
+               Historical Delay Trends
+            </h1>
+            <p className="text-blue-100 opacity-90">Analyze long-term delay patterns and performance</p>
           </div>
           
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px] bg-white border-slate-200">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-slate-200">
-              <SelectItem value="all-time">All Time</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="bg-white/10 p-1 rounded-lg backdrop-blur-sm border border-white/20">
+             <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[180px] bg-transparent border-none text-white focus:ring-0 focus:ring-offset-0 shadow-none">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-border text-foreground">
+                <SelectItem value="all-time">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+      </div>
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Header content moved to Hero Banner */ }
 
         {/* Trend Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="bg-white border border-border border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader className="pb-2">
-              <CardDescription className="text-[#64748B]">Month-over-Month Change</CardDescription>
-              {isLoading ? <Skeleton className="h-8 w-32" /> : (
-                <CardTitle className={`text-2xl ${delayChange > 0 ? 'text-red-500' : 'text-green-500'}`}>
+              <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">MoM Change</CardDescription>
+              {isLoading ? <Skeleton className="h-8 w-32 bg-muted" /> : (
+                <CardTitle className={`text-2xl font-mono ${delayChange > 0 ? 'text-red-500' : 'text-green-500'}`}>
                   {delayChange > 0 ? '+' : ''}{delayChange} min
                 </CardTitle>
               )}
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-5 w-24" /> : (
+              {isLoading ? <Skeleton className="h-5 w-24 bg-muted" /> : (
                 <div className={`flex items-center gap-2 text-sm font-medium ${delayChange > 0 ? 'text-red-500' : 'text-green-500'}`}>
                   {delayChange > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                   <span>{Math.abs(delayChangePercent)}% vs last month</span>
@@ -92,27 +99,27 @@ export function HistoricalTrendsPage({ user, onNavigate, onLogout }) {
             </CardContent>
           </Card>
 
-          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <Card className="bg-white border border-border border-t-4 border-t-purple-500 shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <CardHeader className="pb-2">
-              <CardDescription className="text-[#64748B]">Total Recorded Delays</CardDescription>
-              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-24" /> : totalDelays}</CardTitle>
+              <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Total Recorded Delays</CardDescription>
+              <CardTitle className="text-foreground text-2xl font-mono">{isLoading ? <Skeleton className="h-8 w-24 bg-white/10" /> : totalDelays}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-[#64748B] text-sm">
-                <Activity className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Activity className="w-4 h-4 text-purple-500" />
                 <span>Across all tracked flights</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+          <Card className="bg-white border border-border border-t-4 border-t-primary shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
             <CardHeader className="pb-2">
-              <CardDescription className="text-[#64748B]">Average Delay (All Time)</CardDescription>
-              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-24" /> : `${avgDelayAllTime} min`}</CardTitle>
+              <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Average Delay (All Time)</CardDescription>
+              <CardTitle className="text-foreground text-2xl font-mono">{isLoading ? <Skeleton className="h-8 w-24 bg-white/10" /> : `${avgDelayAllTime} min`}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-[#64748B] text-sm">
-                <Calendar className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Calendar className="w-4 h-4 text-primary" />
                 <span>Historical average</span>
               </div>
             </CardContent>
@@ -120,53 +127,55 @@ export function HistoricalTrendsPage({ user, onNavigate, onLogout }) {
         </div>
 
         {/* Chart Card */}
-        <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+        <Card className="bg-card border-border shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
           <CardHeader>
-             <CardTitle className="text-[#1E293B]">Delay Trends Over Time</CardTitle>
-             <CardDescription className="text-[#64748B]">Historical average delay in minutes</CardDescription>
+             <CardTitle className="text-foreground">Delay Trends Over Time</CardTitle>
+             <CardDescription className="text-muted-foreground">Historical average delay in minutes</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="w-full h-[400px] flex items-center justify-center">
-                  <Skeleton className="h-full w-full" />
+              <div className="relative w-full h-[400px] flex items-center justify-center">
+                <div className="absolute top-0 w-full h-[300px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+                <Skeleton className="h-full w-full bg-white/5" />
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis 
                     dataKey="month" 
-                    stroke="#64748B" 
+                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
                     dy={10}
                   />
                   <YAxis 
-                    stroke="#64748B" 
+                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    label={{ value: 'Minutes', angle: -90, position: 'insideLeft', style: { fill: '#64748B' } }}
+                    label={{ value: 'Minutes', angle: -90, position: 'insideLeft', style: { fill: 'hsl(var(--muted-foreground))' } }}
                   />
                   <Tooltip 
+                    cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
                     contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                      backdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                      borderRadius: '12px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      backgroundColor: 'hsl(var(--popover))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '0.5rem',
+                      color: 'hsl(var(--foreground))'
                     }}
-                    itemStyle={{ color: '#007AFF' }}
+                    itemStyle={{ color: 'hsl(var(--primary))' }}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="avgDelay" 
-                    stroke="#007AFF" 
+                    stroke="hsl(var(--primary))" 
                     strokeWidth={3}
                     name="Average Delay (minutes)"
-                    dot={{ fill: '#007AFF', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    dot={{ fill: 'hsl(var(--background))', r: 4, strokeWidth: 2, stroke: 'hsl(var(--primary))' }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: 'hsl(var(--primary))' }}
                   />
                 </LineChart>
               </ResponsiveContainer>

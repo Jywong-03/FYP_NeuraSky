@@ -48,38 +48,41 @@ flights.forEach(flight => {
   }
 });
 
-  const COLORS = ['#3b82f6', '#06b6d4', '#0ea5e9', '#0284c7'];
+  const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#a855f7']; // Mutiara Blue, Growth Green, Indigo, Purple
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <Card className="border-sky-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <Card className="bg-white border border-border border-t-4 border-t-blue-500 hover:shadow-md transition-shadow">
         <CardHeader>
-          <CardTitle className="text-sky-900">Delay Duration Distribution</CardTitle>
-          <CardDescription>Breakdown of delays by time ranges</CardDescription>
+          <CardTitle className="text-foreground">Delay Duration Distribution</CardTitle>
+          <CardDescription className="text-muted-foreground">Breakdown of delays by time ranges</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={delayDurations}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-              <XAxis dataKey="range" stroke="#0c4a6e" />
-              <YAxis stroke="#0c4a6e" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="range" stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} />
+              <YAxis stroke="hsl(var(--muted-foreground))" tick={{fill: 'hsl(var(--muted-foreground))'}} />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#fff', 
-                  border: '1px solid #bae6fd',
-                  borderRadius: '8px'
+                  backgroundColor: 'hsl(var(--popover))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '0.5rem',
+                  color: 'hsl(var(--foreground))'
                 }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
+                cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
               />
-              <Bar dataKey="count" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      <Card className="border-sky-100 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+      <Card className="bg-white border border-border border-t-4 border-t-green-500 hover:shadow-md transition-shadow">
         <CardHeader>
-          <CardTitle className="text-sky-900">Flight Status Breakdown</CardTitle>
-          <CardDescription>Live status of your tracked flights</CardDescription>
+          <CardTitle className="text-foreground">Flight Status Breakdown</CardTitle>
+          <CardDescription className="text-muted-foreground">Live status of your tracked flights</CardDescription>
         </CardHeader>
         <CardContent>
           {reasonData.length > 0 ? (
@@ -91,25 +94,29 @@ flights.forEach(flight => {
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
+                  outerRadius={100}
+                  innerRadius={60}
                   fill="#8884d8"
                   dataKey="value"
+                  paddingAngle={5}
                 >
                   {reasonData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
                   ))}
                 </Pie>
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #bae6fd',
-                    borderRadius: '8px'
+                    backgroundColor: 'hsl(var(--popover))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '0.5rem',
+                    color: 'hsl(var(--foreground))'
                   }}
+                  itemStyle={{ color: 'hsl(var(--foreground))' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-sky-600">
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground bg-card/20 rounded-lg border border-border">
               No delay data available
             </div>
           )}

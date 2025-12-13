@@ -6,20 +6,14 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 // Fix for Leaflet default icon not found in Next.js
+// Ideally, we'd use a custom "Digital" pin icon here
 const icon = L.icon({
-  iconUrl: '/images/marker-icon.png', // We'll need to ensure these exist or use CDN
-  shadowUrl: '/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-
-// Since we don't have local images yet, let's use CDN for the fix immediately
-L.Marker.prototype.options.icon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
+L.Marker.prototype.options.icon = icon;
 
 
 const AIRPORT_COORDINATES = {
@@ -47,11 +41,8 @@ export default function FlightMap({ origin, destination }) {
   const originCoords = AIRPORT_COORDINATES[origin];
   const destCoords = AIRPORT_COORDINATES[destination];
 
-  console.log("FlightMap Rendering:", { origin, destination, originCoords, destCoords });
-
   if (!originCoords || !destCoords) {
-    console.warn("FlightMap: Missing coordinates for", origin, destination);
-    return <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">Map coordinates not available for {origin}-{destination}</div>;
+    return <div className="h-full w-full flex items-center justify-center bg-card/20 text-muted-foreground border border-border rounded-xl">Map coordinates not available</div>;
   }
 
   const bounds = [originCoords, destCoords];
@@ -61,25 +52,36 @@ export default function FlightMap({ origin, destination }) {
   ];
 
   return (
-    <MapContainer 
-      center={midpoint} 
-      zoom={6} 
-      scrollWheelZoom={false} 
-      className="h-full w-full rounded-xl z-0"
-      style={{ height: '100%', width: '100%', minHeight: '200px' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker position={originCoords}>
-        <Popup>Origin: {origin}</Popup>
-      </Marker>
-      <Marker position={destCoords}>
-        <Popup>Destination: {destination}</Popup>
-      </Marker>
-      <Polyline positions={[originCoords, destCoords]} color="blue" dashArray="5, 10" />
-      <ChangeView bounds={bounds} />
-    </MapContainer>
+    <div className="h-full w-full rounded-xl overflow-hidden border border-primary/20 shadow-[0_0_15px_rgba(6,182,212,0.15)] relative">
+        <MapContainer 
+        center={midpoint} 
+        zoom={6} 
+        scrollWheelZoom={false} 
+        className="h-full w-full z-0 bg-slate-950"
+        style={{ height: '100%', width: '100%', minHeight: '300px' }}
+        >
+        {/* Dark Theme Tiles */}
+        <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        <Marker position={originCoords}>
+            <Popup className="text-black">Origin: {origin}</Popup>
+        </Marker>
+        <Marker position={destCoords}>
+            <Popup className="text-black">Destination: {destination}</Popup>
+        </Marker>
+        <Polyline 
+            positions={[originCoords, destCoords]} 
+            pathOptions={{ color: '#06b6d4', dashArray: '10, 10', weight: 2, opacity: 0.8 }} 
+        />
+        <ChangeView bounds={bounds} />
+        </MapContainer>
+        
+        {/* Decorative Overlay for "Tech" feel */}
+        <div className="absolute top-4 right-4 z-400 bg-black/80 px-3 py-1 rounded text-xs font-mono text-primary border border-primary/30 pointer-events-none">
+            LIVE SATELLITE FEED
+        </div>
+    </div>
   );
 }

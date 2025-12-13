@@ -157,17 +157,16 @@ export function AlertNotifications() {
 
   return (
     <>
-      {/* Notification Bell Button */}
       <div className="relative">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setShowPanel(!showPanel)}
-          className="relative text-sky-700 hover:text-sky-900 hover:bg-sky-50"
+          className="relative text-primary hover:text-primary hover:bg-primary/10 transition-colors"
         >
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs">
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs animate-pulse">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -177,15 +176,18 @@ export function AlertNotifications() {
       {/* Notification Panel */}
       {showPanel && (
         <div className="fixed top-16 right-4 w-96 z-50 animate-in fade-in slide-in-from-top-5 duration-300">
-          <Card className="border-sky-100 shadow-2xl bg-white">
-            <CardHeader className="pb-3">
+          <Card className="border-primary/20 shadow-2xl bg-card text-foreground shadow-primary/10">
+            <div className="p-3 border-b border-border bg-muted/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sky-900">Alerts & Notifications</CardTitle>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-primary" />
+                  Notifications
+                </CardTitle>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowPanel(false)}
-                  className="text-sky-700 hover:text-sky-900 hover:bg-sky-50"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -195,49 +197,50 @@ export function AlertNotifications() {
                   <Switch
                     checked={alertsEnabled}
                     onCheckedChange={setAlertsEnabled}
+                    className="data-[state=checked]:bg-primary"
                   />
-                  <span className="text-sky-600">Real-time alerts</span>
+                  <span className="text-sm text-muted-foreground">Real-time alerts</span>
                 </div>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={markAllAsRead}
-                    className="text-sky-600"
+                    className="text-xs text-primary hover:text-primary hover:bg-primary/10"
                   >
                     Mark all read
                   </Button>
                 )}
               </div>
-            </CardHeader>
+            </div>
             <CardContent className="p-0">
               <ScrollArea className="h-[400px]">
                 {alerts.length === 0 ? (
-                  <div className="p-8 text-center text-sky-600">
-                    <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No notifications</p>
+                  <div className="p-12 text-center text-muted-foreground">
+                    <Bell className="w-12 h-12 mx-auto mb-3 opacity-20 text-primary" />
+                    <p className="text-sm">No new notifications</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-sky-100">
+                  <div className="divide-y divide-border">
                     {alerts.map((alert) => (
                       <div
                         key={alert.id}
-                        className={`p-4 hover:bg-sky-50 transition-colors cursor-pointer ${
-                          !alert.read ? 'bg-blue-50/50' : ''
+                        className={`p-4 hover:bg-muted transition-colors cursor-pointer ${
+                          !alert.read ? 'bg-primary/5' : ''
                         }`}
                         onClick={() => markAsRead(alert.id)}
                       >
                         <div className="flex gap-3">
-                          <div className={`p-2 rounded-lg ${getSeverityColor(alert.severity)}`}>
+                          <div className={`p-2 rounded-lg ${getSeverityColor(alert.severity)} shrink-0 h-fit`}>
                             {getAlertIcon(alert.type)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-sky-900">{alert.title}</p>
+                              <p className={`text-sm font-semibold ${!alert.read ? 'text-foreground' : 'text-muted-foreground'}`}>{alert.title}</p>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 shrink-0"
+                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   deleteAlert(alert.id);
@@ -246,14 +249,14 @@ export function AlertNotifications() {
                                 <X className="w-3 h-3" />
                               </Button>
                             </div>
-                            <p className="text-sky-600 mb-2">{alert.message}</p>
+                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{alert.message}</p>
                             <div className="flex items-center gap-2">
                               {alert.flightNumber && (
-                                <Badge variant="outline" className="border-sky-300 text-sky-700">
+                                <Badge variant="outline" className="border-primary/30 text-primary text-[10px] h-5 px-1.5 font-mono">
                                   {alert.flightNumber}
                                 </Badge>
                               )}
-                              <span className="text-sky-500 flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-auto">
                                 <Clock className="w-3 h-3" />
                                 {formatTimestamp(alert.timestamp)}
                               </span>

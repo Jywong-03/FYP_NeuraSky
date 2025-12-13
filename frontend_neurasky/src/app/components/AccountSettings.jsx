@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
+import { Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -92,69 +93,42 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="fixed inset-0 -z-10 bg-ios-bg">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-400/20 rounded-full blur-3xl opacity-50 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-400/10 rounded-full blur-3xl opacity-50 pointer-events-none" />
-      </div>
+    <div className="min-h-screen relative overflow-hidden bg-background">
+      <div className="fixed inset-0 -z-10 bg-background" />
 
       <Navigation user={user} currentPage="settings" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-[#1E293B] mb-2">Settings</h1>
-          <p className="text-[#64748B]">Manage your account and preferences</p>
+      {/* Corporate Hero Header */}
+      <div className="absolute top-0 w-full h-[300px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
+             <Settings className="w-8 h-8" />
+             Settings
+          </h1>
+          <p className="text-blue-100 opacity-90">Manage your account preferences and security</p>
         </div>
+      </div>
+      
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Header content moved to Hero Banner */ }
 
         <div className="space-y-6">
           
           {settingsLoading && (
             <>
-              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Card className="bg-card border-border animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardHeader>
-                  <Skeleton className="h-6 w-1/2" />
-                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-6 w-1/2 bg-muted" />
+                  <Skeleton className="h-4 w-1/3 bg-muted" />
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-6 w-12" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-6 w-12" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-6 w-12" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-6 w-12" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-                <CardHeader>
-                  <Skeleton className="h-6 w-1/2" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Skeleton className="h-5 w-1/3" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-5 w-1/3" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-5 w-1/3" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-32" />
-                </CardContent>
-              </Card>
-              <Card className="border-red-200/50 bg-red-50/50 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-                <CardHeader>
-                  <Skeleton className="h-6 w-1/2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-10 w-32" />
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                        <Skeleton className="h-5 w-1/3 bg-muted" />
+                        <Skeleton className="h-6 w-12 bg-muted" />
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </>
@@ -162,16 +136,16 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
 
           {!settingsLoading && settings && (
             <>
-              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Card className="bg-white border border-border border-t-4 border-t-blue-500 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CardHeader>
-                  <CardTitle className="text-[#1E293B]">Notification Preferences</CardTitle>
-                  <CardDescription className="text-[#64748B]">Control how you receive alerts</CardDescription>
+                  <CardTitle className="text-foreground">Notification Preferences</CardTitle>
+                  <CardDescription className="text-muted-foreground">Control how you receive alerts</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[#1E293B] font-medium">Email Notifications</p>
-                      <p className="text-sm text-[#64748B]">Receive alerts via email</p>
+                      <p className="text-foreground font-medium">Email Notifications</p>
+                      <p className="text-sm text-muted-foreground">Receive alerts via email</p>
                     </div>
                     <Switch
                       id="email-notifications"
@@ -181,8 +155,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[#1E293B] font-medium">Push Notifications</p>
-                      <p className="text-sm text-[#64748B]">Receive alerts on your device</p>
+                      <p className="text-foreground font-medium">Push Notifications</p>
+                      <p className="text-sm text-muted-foreground">Receive alerts on your device</p>
                     </div>
                     <Switch
                       id="push-notifications"
@@ -192,8 +166,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[#1E293B] font-medium">Delay Alerts</p>
-                      <p className="text-sm text-[#64748B]">Notify me about flight delays</p>
+                      <p className="text-foreground font-medium">Delay Alerts</p>
+                      <p className="text-sm text-muted-foreground">Notify me about flight delays</p>
                     </div>
                     <Switch
                       id="delay-alerts"
@@ -203,8 +177,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[#1E293B] font-medium">Weekly Digest</p>
-                      <p className="text-sm text-[#64748B]">A summary of your flight activity</p>
+                      <p className="text-foreground font-medium">Weekly Digest</p>
+                      <p className="text-sm text-muted-foreground">A summary of your flight activity</p>
                     </div>
                     <Switch
                       id="weekly-digest"
@@ -215,73 +189,73 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                 </CardContent>
               </Card>
 
-              <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+              <Card className="bg-white border border-border border-t-4 border-t-primary shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
                 <CardHeader>
-                  <CardTitle className="text-[#1E293B]">Change Password</CardTitle>
+                  <CardTitle className="text-foreground">Change Password</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handlePasswordChange} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="current-password" className="text-[#1E293B]">Current Password</Label>
+                      <Label htmlFor="current-password" className="text-foreground">Current Password</Label>
                       <Input
                         id="current-password"
                         type="password"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         required
-                        className="bg-white/50"
+                        className="bg-white border-border text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="new-password" className="text-[#1E293B]">New Password</Label>
+                      <Label htmlFor="new-password" className="text-foreground">New Password</Label>
                       <Input
                         id="new-password"
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
-                        className="bg-white/50"
+                        className="bg-white border-border text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirm-password" className="text-[#1E293B]">Confirm New Password</Label>
+                      <Label htmlFor="confirm-password" className="text-foreground">Confirm New Password</Label>
                       <Input
                         id="confirm-password"
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        className="bg-white/50"
+                        className="bg-white border-border text-foreground"
                       />
                     </div>
-                    <Button type="submit" className="bg-[#007AFF] hover:bg-[#007AFF]/90 text-white">
+                    <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20">
                       Update Password
                     </Button>
                   </form>
                 </CardContent>
               </Card>
 
-              <Card className="border-red-200 bg-red-50 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+              <Card className="bg-red-950/20 border-red-500/20 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
                 <CardHeader>
-                  <CardTitle className="text-red-600">Delete Account</CardTitle>
-                  <CardDescription>Permanently delete your account and all associated data.</CardDescription>
+                  <CardTitle className="text-red-400">Delete Account</CardTitle>
+                  <CardDescription className="text-red-300/70">Permanently delete your account and all associated data.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white shadow-sm">Delete Account</Button>
+                      <Button variant="destructive" className="bg-red-500/20 hover:bg-red-500/30 text-red-500 border border-red-500/50 hover:border-red-500 shadow-sm">Delete Account</Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="bg-card border-border text-foreground">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogDescription className="text-muted-foreground">
                           This action cannot be undone. This will permanently delete your account
                           and remove your data from our servers.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700">
+                        <AlertDialogCancel className="bg-transparent border-border text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white">
                           Yes, delete my account
                         </AlertDialogAction>
                       </AlertDialogFooter>

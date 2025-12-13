@@ -50,113 +50,120 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
     : 0;
     
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="fixed inset-0 -z-10 bg-ios-bg">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-400/20 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob" />
-        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-400/10 rounded-full blur-3xl opacity-50 pointer-events-none animate-blob animation-delay-2000" />
-      </div>
+    <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
+      <div className="fixed inset-0 -z-10 bg-background" />
 
       <Navigation user={user} currentPage="delay-duration" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Corporate Hero Header */}
+      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#1E293B] mb-2">Delay Duration Distribution</h1>
-            <p className="text-[#64748B]">Analysis of historical flight delay patterns</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
+               <Clock className="w-8 h-8" />
+               Delay Duration Distribution
+            </h1>
+            <p className="text-blue-100 opacity-90">Analysis of historical flight delay patterns</p>
           </div>
           
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px] bg-white border-slate-200">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-slate-200">
-              <SelectItem value="all-time">All Time</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="bg-white/10 p-1 rounded-lg backdrop-blur-sm border border-white/20">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[180px] bg-transparent border-none text-white focus:ring-0 focus:ring-offset-0 shadow-none">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-border text-foreground">
+                <SelectItem value="all-time">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+      </div>
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Header content moved to Hero Banner */ }
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="bg-white border border-border border-t-4 border-t-red-500 shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader className="pb-2">
-              <CardDescription className="text-[#64748B]">Total Delayed Flights</CardDescription>
-              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-24" /> : totalDelayedFlights}</CardTitle>
+              <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Total Delayed Flights</CardDescription>
+              <CardTitle className="text-foreground text-2xl font-mono">{isLoading ? <Skeleton className="h-8 w-24 bg-muted" /> : totalDelayedFlights}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-[#64748B] text-sm">
-                <AlertCircle className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <AlertCircle className="w-4 h-4 text-red-500" />
                 <span>Based on historical data</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <Card className="bg-white border border-border border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <CardHeader className="pb-2">
-              <CardDescription className="text-[#64748B]">Total Flights Analyzed</CardDescription>
-              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-24" /> : totalFlights}</CardTitle>
+              <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Total Flights Analyzed</CardDescription>
+              <CardTitle className="text-foreground text-2xl font-mono">{isLoading ? <Skeleton className="h-8 w-24 bg-muted" /> : totalFlights}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-[#64748B] text-sm">
-                <Clock className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Clock className="w-4 h-4 text-blue-500" />
                 <span>All recorded flights</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+          <Card className="bg-white border border-border border-t-4 border-t-orange-500 shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
             <CardHeader className="pb-2">
-              <CardDescription className="text-[#64748B]">Most Common Delay</CardDescription>
-              <CardTitle className="text-[#1E293B]">{isLoading ? <Skeleton className="h-8 w-32" /> : mostCommon.range}</CardTitle>
+              <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Most Common Delay</CardDescription>
+              <CardTitle className="text-foreground text-2xl font-mono">{isLoading ? <Skeleton className="h-8 w-32 bg-muted" /> : mostCommon.range}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 border-blue-200/50">{mostCommonPercent}% of delays</Badge>
+              <Badge variant="outline" className="border-orange-500/20 text-orange-600 bg-orange-50">{mostCommonPercent}% of delays</Badge>
             </CardContent>
           </Card>
         </div>
 
         {/* Delay Duration Distribution Chart */}
-        <Card className="border-white/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+        <Card className="bg-white border border-border border-t-4 border-t-primary shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
           <CardHeader>
-            <CardTitle className="text-[#1E293B]">Delay Duration Breakdown</CardTitle>
-            <CardDescription className="text-[#64748B]">Distribution of delays across time ranges</CardDescription>
+            <CardTitle className="text-foreground">Delay Duration Breakdown</CardTitle>
+            <CardDescription className="text-muted-foreground">Distribution of delays across time ranges</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="w-full h-[400px] flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
+                <Skeleton className="h-full w-full bg-muted" />
               </div>
             ) : (
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={durationData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis 
                   dataKey="range" 
-                  stroke="#64748B" 
+                  stroke="hsl(var(--muted-foreground))" 
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis 
-                  stroke="#64748B" 
+                  stroke="hsl(var(--muted-foreground))" 
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value) => `${value}`}
                 />
                 <Tooltip 
-                  cursor={{ fill: 'transparent' }}
+                  cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
                   contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    backgroundColor: 'hsl(var(--popover))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '0.5rem',
+                    color: 'hsl(var(--foreground))'
                   }}
+                  itemStyle={{ color: 'hsl(var(--foreground))' }}
                 />
-                <Legend />
+                <Legend iconType="circle" />
                 <Bar 
                   dataKey="flights" 
-                  fill="#007AFF" 
+                  fill="hsl(var(--primary))" 
                   name="Number of Flights" 
                   radius={[4, 4, 0, 0]} 
                   barSize={40}
