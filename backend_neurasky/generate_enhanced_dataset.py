@@ -116,9 +116,14 @@ for i in range(NUM_FLIGHTS):
 
     # Deterministic Probability assignment
     if is_high_risk:
-        final_delay_prob = 0.99  # 99% chance (Almost reduced noise)
+        final_delay_prob = 0.75  # 75% chance (High risk but not certain)
     else:
-        final_delay_prob = 0.01  # 1% chance (Almost reduced noise)
+        # Add random weather events (simulated)
+        # 15% chance of bad weather affecting a normal flight
+        if random.random() < 0.15:
+             final_delay_prob = 0.40 # Medium risk due to random weather
+        else:
+             final_delay_prob = 0.05  # 5% chance (Low risk, mostly on time)
     
     # Determine if delayed
     is_delayed = random.random() < final_delay_prob

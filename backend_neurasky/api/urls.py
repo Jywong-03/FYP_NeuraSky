@@ -52,4 +52,5 @@ urlpatterns = [
     path('analytics/delay-reasons/', views.DelayReasonsView.as_view(), name='delay-reasons'),
     path('analytics/delay-durations/', views.DelayDurationView.as_view(), name='delay-durations'),
     path('analytics/historical-trends/', views.HistoricalTrendsView.as_view(), name='historical-trends'),
+    path('analytics/route-forecast/', views.RouteForecastView.as_view(), name='route-forecast'),
 ]

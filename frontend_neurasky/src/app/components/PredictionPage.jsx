@@ -7,10 +7,11 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { CloudRain, Sun, Cloud, AlertTriangle, CheckCircle2, Plane } from 'lucide-react';
+import { CloudRain, Sun, Cloud, AlertTriangle, CheckCircle2, Plane, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../config';
 import dynamic from 'next/dynamic';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const FlightMapWithNoSSR = dynamic(() => import('./FlightMap'), {
   ssr: false,
@@ -111,40 +112,91 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Origin (Airport)</Label>
-                    <Select onValueChange={(val) => setFormData({...formData, origin: val})}>
+                    <div className="flex justify-between items-center">
+                      <Label>Origin (Airport)</Label>
+                      {formData.origin && (
+                        <button 
+                          onClick={() => setFormData({...formData, origin: ''})}
+                          className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition-colors"
+                        >
+                          <X className="w-3 h-3" /> Clear
+                        </button>
+                      )}
+                    </div>
+                    <Select value={formData.origin} onValueChange={(val) => setFormData({...formData, origin: val})}>
                       <SelectTrigger className="bg-background/50 border-border">
                         <SelectValue placeholder="Select Origin" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-border">
-                        <SelectItem value="KUL">Kuala Lumpur (KUL)</SelectItem>
-                        <SelectItem value="PEN">Penang (PEN)</SelectItem>
-                        <SelectItem value="BKI">Kota Kinabalu (BKI)</SelectItem>
-                        <SelectItem value="KCH">Kuching (KCH)</SelectItem>
-                        <SelectItem value="LGK">Langkawi (LGK)</SelectItem>
-                        <SelectItem value="JHB">Johor Bahru (JHB)</SelectItem>
-                        <SelectItem value="SIN">Singapore (SIN)</SelectItem>
+                        {[
+                          { value: "KUL", label: "Kuala Lumpur (KUL)" },
+                          { value: "PEN", label: "Penang (PEN)" },
+                          { value: "BKI", label: "Kota Kinabalu (BKI)" },
+                          { value: "KCH", label: "Kuching (KCH)" },
+                          { value: "LGK", label: "Langkawi (LGK)" },
+                          { value: "JHB", label: "Johor Bahru (JHB)" },
+                          { value: "SIN", label: "Singapore (SIN)" }
+                        ].map((airport) => (
+                          <SelectItem 
+                            key={airport.value} 
+                            value={airport.value}
+                            disabled={formData.destination === airport.value}
+                            className={formData.destination === airport.value ? "opacity-50" : ""}
+                          >
+                            {airport.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Destination</Label>
-                    <Select onValueChange={(val) => setFormData({...formData, destination: val})}>
+                    <div className="flex justify-between items-center">
+                      <Label>Destination</Label>
+                      {formData.destination && (
+                        <button 
+                          onClick={() => setFormData({...formData, destination: ''})}
+                          className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition-colors"
+                        >
+                          <X className="w-3 h-3" /> Clear
+                        </button>
+                      )}
+                    </div>
+                    <Select value={formData.destination} onValueChange={(val) => setFormData({...formData, destination: val})}>
                       <SelectTrigger className="bg-background/50 border-border">
                         <SelectValue placeholder="Select Dest" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-border">
-                        <SelectItem value="KUL">Kuala Lumpur (KUL)</SelectItem>
-                        <SelectItem value="PEN">Penang (PEN)</SelectItem>
-                        <SelectItem value="BKI">Kota Kinabalu (BKI)</SelectItem>
-                        <SelectItem value="KCH">Kuching (KCH)</SelectItem>
-                        <SelectItem value="LGK">Langkawi (LGK)</SelectItem>
-                        <SelectItem value="JHB">Johor Bahru (JHB)</SelectItem>
-                        <SelectItem value="SIN">Singapore (SIN)</SelectItem>
+                        {[
+                          { value: "KUL", label: "Kuala Lumpur (KUL)" },
+                          { value: "PEN", label: "Penang (PEN)" },
+                          { value: "BKI", label: "Kota Kinabalu (BKI)" },
+                          { value: "KCH", label: "Kuching (KCH)" },
+                          { value: "LGK", label: "Langkawi (LGK)" },
+                          { value: "JHB", label: "Johor Bahru (JHB)" },
+                          { value: "SIN", label: "Singapore (SIN)" }
+                        ].map((airport) => (
+                          <SelectItem 
+                            key={airport.value} 
+                            value={airport.value}
+                            disabled={formData.origin === airport.value}
+                            className={formData.origin === airport.value ? "opacity-50" : ""}
+                          >
+                            {airport.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Scheduled Departure Time</Label>
+                  <Input 
+                    type="time"
+                    className="bg-white border-border text-foreground"
+                    onChange={(e) => setFormData({...formData, departure_time: e.target.value})}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -195,7 +247,7 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
 
           {/* RIGHT COLUMN: RESULTS */}
           <div className="w-full md:w-1/2 space-y-6">
-            <div className="opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
+            <div>
               {!result && !loading && (
                 <div className="h-full flex flex-col items-center justify-center p-12 text-center text-muted-foreground/50 border-2 border-dashed border-border rounded-3xl bg-card/20">
                   <Plane className="w-16 h-16 mb-4 opacity-20" />
@@ -206,47 +258,79 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
 
               {result && (
                 <div className="space-y-6">
-                  {/* PREDICTION CARD */}
-                  <Card className="overflow-hidden border border-border border-t-4 border-t-primary shadow-md bg-white">
-                    <div className={`h-1 w-full ${result.estimated_delay_minutes > 15 ? 'bg-red-500' : 'bg-green-500'}`} />
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-2xl flex items-center gap-2">
-                            {result.estimated_delay_minutes > 15 ? (
-                              <span className="text-red-400 flex items-center gap-2 drop-shadow-[0_0_5px_rgba(239,68,68,0.3)]">
-                                <AlertTriangle className="w-6 h-6" /> {result.prediction}
-                              </span>
-                            ) : (
-                              <span className="text-green-400 flex items-center gap-2 drop-shadow-[0_0_5px_rgba(74,222,128,0.3)]">
-                                <CheckCircle2 className="w-6 h-6" /> {result.prediction}
-                              </span>
-                            )}
-                          </CardTitle>
-                          <CardDescription className="text-base mt-1 flex items-center gap-3">
-                            <span className="text-muted-foreground">Confidence: <span className="font-semibold text-primary">{result.confidence}</span></span>
-                            {result.model_info && result.model_info.accuracy && (
-                              <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full border border-primary/20" title="Based on testing with 65,000 recent flights">
-                                Model Accuracy: {(parseFloat(result.model_info.accuracy) * 100).toFixed(1)}%
-                              </span>
-                            )}
-                          </CardDescription>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide font-bold">Est. Delay</p>
-                          <p className={`text-4xl font-mono font-bold ${result.estimated_delay_minutes > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                            {result.estimated_delay_minutes} <span className="text-sm font-normal text-muted-foreground">min</span>
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="p-4 bg-background/50 rounded-lg border border-border">
-                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1">Primary Factor</p>
-                        <p className="text-foreground font-medium">{result.reason}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* DETAILED RESULTS HEADER */}
+                  <div className={`p-6 rounded-xl border ${result.estimated_delay_minutes > 15 ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'} text-center shadow-sm`}>
+                     <div className="flex items-center justify-center gap-3 text-2xl font-bold mb-2">
+                        {result.estimated_delay_minutes > 15 ? <AlertTriangle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+                        {result.estimated_delay_minutes > 15 ? "DELAY PREDICTED" : "ON-TIME PREDICTED"}
+                     </div>
+                     <p className="text-lg font-medium opacity-90">
+                        Probability: <span className="font-bold">{result.confidence}</span>
+                     </p>
+                  </div>
+
+                  {/* PROBABILITY CHART */}
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="font-semibold text-gray-700 mb-6">Prediction Probability</h3>
+                    <div className="h-48 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          layout="vertical"
+                          data={[
+                            { name: 'On-time', value: parseFloat(result.confidence_ontime) },
+                            { name: 'Delayed', value: parseFloat(result.confidence_delayed) },
+                          ]}
+                          margin={{ top: 0, right: 30, left: 40, bottom: 5 }}
+                        >
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}} />
+                          <RechartsTooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px'}} />
+                          <Bar dataKey="value" barSize={30} radius={[0, 4, 4, 0]}>
+                            {
+                              [
+                                { name: 'On-time', value: parseFloat(result.confidence_ontime) },
+                                { name: 'Delayed', value: parseFloat(result.confidence_delayed) },
+                              ].map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={index === 0 ? '#4ade80' : '#f87171'} />
+                              ))
+                            }
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* KEY FACTORS GRID */}
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="text-xl font-bold text-gray-800 mb-6">Key Factors</h3>
+                    <div className="grid grid-cols-2 gap-8">
+                       {/* Row 1 */}
+                       <div>
+                          <p className="text-sm text-gray-500 mb-1">Route Delay Rate</p>
+                          <p className="text-3xl font-regular text-gray-800">{result.detailed_metrics ? result.detailed_metrics.route_delay_rate : "15%"}</p>
+                          <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">↑ Historical route performance</span>
+                       </div>
+                       <div>
+                          <p className="text-sm text-gray-500 mb-1">Airline Delay Rate</p>
+                          <p className="text-3xl font-regular text-gray-800">{result.detailed_metrics ? result.detailed_metrics.airline_delay_rate : "12%"}</p>
+                          <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">↑ Airline performance</span>
+                       </div>
+
+                       {/* Row 2 */}
+                       <div>
+                          <p className="text-sm text-gray-500 mb-1">Departure Hour</p>
+                          <p className="text-3xl font-regular text-gray-800">{result.detailed_metrics ? result.detailed_metrics.departure_hour : formData.departure_time?.split(':')[0] || "12"}</p>
+                          <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">↑ Time of day factor</span>
+                       </div>
+                       <div>
+                          <p className="text-sm text-gray-500 mb-1">Flight Duration</p>
+                          <p className="text-3xl font-regular text-gray-800">{result.detailed_metrics ? result.detailed_metrics.flight_duration_mins : "60"} min</p>
+                          <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">↑ Scheduled duration</span>
+                       </div>
+                    </div>
+                  </div>
+
+
 
                   {/* ROUTE MAP VISUALIZATION */}
                   <div className="relative h-64 w-full rounded-xl overflow-hidden border border-primary/20 shadow-[0_0_15px_rgba(6,182,212,0.1)] bg-black">
@@ -255,7 +339,7 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
                     </div>
                     
                     {/* Overlay Info */}
-                    <div className="absolute top-2 right-2 z-400 bg-black/90 px-3 py-1 rounded-full text-xs font-bold text-primary border border-primary/30">
+                    <div className="absolute top-2 right-2 z-400 bg-black/90 px-3 py-1 rounded-full text-xs font-bold text-white border border-white/30">
                        {formData.airline} {formData.flight_number}
                     </div>
                   </div>
@@ -263,29 +347,29 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
                   {/* WEATHER WIDGETS */}
                   <div className="grid grid-cols-2 gap-4">
                     {/* ORIGIN WEATHER */}
-                    <Card className="bg-linear-to-br from-blue-900/50 to-blue-900/40 border-blue-500/20 bg-card">
+                    <Card className="bg-linear-to-br from-blue-500/20 to-blue-600/10 border-blue-200/50 backdrop-blur-md">
                       <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 bg-secondary rounded-full shadow-sm">
+                        <div className="p-3 bg-white rounded-full shadow-sm">
                           {getWeatherIcon(result.origin_weather.condition)}
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Origin</p>
-                          <p className="font-bold text-foreground text-lg">{result.origin_weather.temp}</p>
-                          <p className="text-xs text-muted-foreground">{result.origin_weather.condition}</p>
+                          <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Origin</p>
+                          <p className="font-bold text-slate-800 text-lg">{result.origin_weather.temp}</p>
+                          <p className="text-sm text-slate-600 font-medium">{result.origin_weather.condition}</p>
                         </div>
                       </CardContent>
                     </Card>
 
                     {/* DEST WEATHER */}
-                    <Card className="bg-linear-to-br from-cyan-900/50 to-cyan-900/40 border-cyan-500/20 bg-card">
+                    <Card className="bg-linear-to-br from-cyan-500/20 to-cyan-600/10 border-cyan-200/50 backdrop-blur-md">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="p-3 bg-secondary rounded-full shadow-sm">
                           {getWeatherIcon(result.dest_weather.condition)}
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Destination</p>
-                          <p className="font-bold text-foreground text-lg">{result.dest_weather.temp}</p>
-                          <p className="text-xs text-muted-foreground">{result.dest_weather.condition}</p>
+                          <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Destination</p>
+                          <p className="font-bold text-slate-800 text-lg">{result.dest_weather.temp}</p>
+                          <p className="text-sm text-slate-600 font-medium">{result.dest_weather.condition}</p>
                         </div>
                       </CardContent>
                     </Card>

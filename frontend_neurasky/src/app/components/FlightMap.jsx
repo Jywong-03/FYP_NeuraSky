@@ -60,10 +60,10 @@ export default function FlightMap({ origin, destination }) {
         className="h-full w-full z-0 bg-slate-950"
         style={{ height: '100%', width: '100%', minHeight: '300px' }}
         >
-        {/* Dark Theme Tiles */}
+        {/* Light Theme Tiles for better readability */}
         <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
         <Marker position={originCoords}>
             <Popup className="text-black">Origin: {origin}</Popup>
@@ -78,10 +78,7 @@ export default function FlightMap({ origin, destination }) {
         <ChangeView bounds={bounds} />
         </MapContainer>
         
-        {/* Decorative Overlay for "Tech" feel */}
-        <div className="absolute top-4 right-4 z-400 bg-black/80 px-3 py-1 rounded text-xs font-mono text-primary border border-primary/30 pointer-events-none">
-            LIVE SATELLITE FEED
-        </div>
+
     </div>
   );
 }

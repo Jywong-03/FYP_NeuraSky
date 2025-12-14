@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DelayDurationPage } from '../components/DelayDurationPage';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { useRouter } from 'next/navigation';
 import { api } from '../../utils/api';
 
-export default function DelayDuration() {
+export default function AnalyticsPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -35,15 +35,24 @@ export default function DelayDuration() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading analytics...</div>;
+     return (
+         <div className="min-h-screen flex items-center justify-center bg-background">
+             <div className="animate-pulse flex flex-col items-center">
+                 <div className="h-12 w-12 bg-primary/20 rounded-full mb-4"></div>
+                 <div className="h-4 w-32 bg-primary/20 rounded"></div>
+             </div>
+         </div>
+     );
   }
 
   if (!user) {
+     // Optional: Redirect to login if api.js doesn't handle it
+     // router.push('/login');
      return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>;
   }
 
   return (
-    <DelayDurationPage 
+    <AnalyticsDashboard 
       user={user} 
       onNavigate={handleNavigate}
       onLogout={handleLogout}

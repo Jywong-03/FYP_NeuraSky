@@ -3,6 +3,8 @@ import requests
 import joblib
 import pandas as pd
 import numpy as np
+
+# Trigger Reload
 import json
 from datetime import datetime
 
@@ -277,7 +279,7 @@ class TrackedFlightDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return TrackedFlight.objects.filter(user=self.request.user)
 
-# --- ENHANCED PREDICTION LOGIC ---
+# --- 2. ENHANCED PREDICTION LOGIC ---
 
 # Helper to estimate distance
 def get_estimated_distance(origin, dest):
@@ -316,6 +318,80 @@ def get_time_of_day(hour):
 def is_peak_hour(hour):
     return hour in [7, 8, 9, 17, 18, 19, 20]
 
+class RouteForecastView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        if not all([ML_MODEL, DATA_ENCODER, FEATURE_NAMES]):
+            return Response({'error': 'Model not initialized'}, status=503)
+
+        origin = request.data.get('origin')
+        destination = request.data.get('destination')
+        airline = request.data.get('airline', 'MH') # Default to MH if not specified
+
+        if not origin or not destination:
+            return Response({'error': 'Origin and Destination are required'}, status=400)
+
+        forecast = []
+        now = datetime.now()
+        
+        # We'll forecast every 2 hours for the next 24 hours
+        for i in range(0, 25, 2):
+            forecast_time = now + pd.Timedelta(hours=i)
+            hour = forecast_time.hour
+            month = forecast_time.month
+            day_of_week = forecast_time.isoweekday()
+            
+            # Prepare Input Data
+            distance = get_estimated_distance(origin, destination)
+            crs_dep_time = hour * 100
+            
+            input_data = pd.DataFrame([{
+                'Month': month,
+                'DayOfWeek': day_of_week,
+                'CRSDepTime': crs_dep_time,
+                'Operating_Airline': airline,
+                'Origin': origin,
+                'Dest': destination,
+                'Distance': distance,
+                'Hour': hour,
+                'IsInternational': int(is_international_route(origin, destination)),
+                'IsPeakHour': int(is_peak_hour(hour)),
+                'IsWeekend': int(day_of_week in [6, 7]),
+                'TimeOfDay': get_time_of_day(hour)
+            }])
+            
+            # Transform Features
+            categorical_cols = ['Operating_Airline', 'Origin', 'Dest', 'TimeOfDay']
+            try:
+                input_data[categorical_cols] = DATA_ENCODER.transform(input_data[categorical_cols])
+            except:
+                # Fallback if unknown route/airport code
+                continue
+
+            for feature in FEATURE_NAMES:
+                if feature not in input_data.columns:
+                    input_data[feature] = 0
+            
+            input_data = input_data[FEATURE_NAMES]
+            
+            # Predict
+            prob = ML_MODEL.predict_proba(input_data)[0][1] # Probability of delay
+            
+            forecast.append({
+                'time': forecast_time.strftime('%H:%M'),
+                'display_time': forecast_time.strftime('%I %p'), # 08 PM
+                'probability': round(prob * 100, 1),
+                'risk_level': 'High' if prob > 0.6 else 'Medium' if prob > 0.3 else 'Low'
+            })
+            
+        return Response({
+            'origin': origin,
+            'destination': destination,
+            'forecast': forecast
+        })
+
+
 @csrf_exempt
 def predict_delay(request):
     if request.method != 'POST':
@@ -331,11 +407,23 @@ def predict_delay(request):
         airline = data.get('airline', 'MH')
         flight_number = data.get('flight_number', '')
         
-        now = datetime.now()
-        month = now.month
-        day_of_week = now.isoweekday()
-        current_hour = now.hour
-        current_minute = now.minute
+        # Parse scheduled departure time
+        departure_time_str = data.get('departure_time', '')
+        if departure_time_str:
+            try:
+                dep_hour, dep_minute = map(int, departure_time_str.split(':'))
+                now = datetime.now()
+                # Use current date but user-provided time
+                current_time = now.replace(hour=dep_hour, minute=dep_minute)
+            except ValueError:
+                current_time = datetime.now()
+        else:
+            current_time = datetime.now()
+
+        month = current_time.month
+        day_of_week = current_time.isoweekday()
+        current_hour = current_time.hour
+        current_minute = current_time.minute
         crs_dep_time = current_hour * 100 + current_minute
 
         distance = get_estimated_distance(origin, destination)
@@ -343,6 +431,9 @@ def predict_delay(request):
         is_international = is_international_route(origin, destination)
         is_peak_bool = is_peak_hour(current_hour)
         is_weekend = day_of_week in [6, 7]
+        
+        # Calculate Flight Duration (approx 800km/h + 30m taxi)
+        flight_duration_mins = int((distance / 800 * 60) + 30)
 
         input_data = pd.DataFrame([{
             'Month': month,
@@ -353,7 +444,7 @@ def predict_delay(request):
             'Dest': destination,
             'Distance': distance,
             'Hour': current_hour,
-            'IsInternational': int(is_international),
+            'IsInternational': int(is_international),\
             'IsPeakHour': int(is_peak_bool),
             'IsWeekend': int(is_weekend),
             'TimeOfDay': time_of_day
@@ -375,9 +466,25 @@ def predict_delay(request):
         confidence_delayed = prediction_prob[1]
         confidence_ontime = prediction_prob[0]
         
+        # Calculate Mock Rates for UI (In real app, query DB)
+        # Base rates
+        route_base = 15.0 
+        airline_base = 18.0
+        
+        # Adjust based on risk factors
+        if is_peak_bool: route_base += 10
+        if is_international: route_base += 5
+        if airline in ['AK', 'OD']: airline_base += 12
+        
+        route_delay_rate = min(95.0, route_base + (confidence_delayed * 20))
+        airline_delay_rate = min(95.0, airline_base + (confidence_delayed * 15))
+
         if is_delayed:
-            avg_delay = TRAINING_METRICS.get('class_distribution', {}).get('delayed', 15) if TRAINING_METRICS else 15
-            estimated_delay = int(confidence_delayed * avg_delay * 1.5)
+            # Fix: Use a realistic base delay (e.g., 45 mins) instead of class count
+            base_delay = 45 
+            estimated_delay = int(confidence_delayed * base_delay * 1.5)
+            # Ensure estimated delay is at least 15 mins
+            estimated_delay = max(15, estimated_delay)
         else:
             estimated_delay = 0
 
@@ -415,6 +522,12 @@ def predict_delay(request):
             'departure_time': f"{current_hour:02d}:{current_minute:02d}",
             'is_international': is_international,
             'is_peak_hour': is_peak_bool,
+            'detailed_metrics': {
+                'route_delay_rate': f"{route_delay_rate:.1f}%",
+                'airline_delay_rate': f"{airline_delay_rate:.1f}%",
+                'flight_duration_mins': flight_duration_mins,
+                'departure_hour': current_hour
+            },
             'model_info': {
                 'f1_score': f"{TRAINING_METRICS['f1_score']:.4f}" if TRAINING_METRICS else "N/A",
                 'recall': f"{TRAINING_METRICS['recall']:.4f}" if TRAINING_METRICS else "N/A",

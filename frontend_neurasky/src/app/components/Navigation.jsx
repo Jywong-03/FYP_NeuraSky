@@ -61,34 +61,14 @@ export function Navigation({ user, currentPage, onNavigate, onLogout }) {
                 Predict Flight
               </Button>
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 ${
-                      ['delay-duration', 'delay-reasons', 'historical-trends'].includes(currentPage) 
-                        ? 'bg-primary/20 text-primary border border-primary/50 shadow-[0_0_10px_rgba(6,182,212,0.5)]' 
-                        : 'text-muted-foreground hover:text-primary hover:bg-primary/10 hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]'
-                    }`}
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                    Analytics
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="bg-white border-border text-foreground shadow-lg">
-                  <DropdownMenuItem onClick={() => onNavigate('delay-duration')} className="cursor-pointer hover:bg-blue-50/50 active:bg-blue-100 active:scale-95 transition-all duration-200 focus:bg-blue-50 focus:text-primary">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Delay Duration
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onNavigate('delay-reasons')} className="cursor-pointer hover:bg-blue-50/50 active:bg-blue-100 active:scale-95 transition-all duration-200 focus:bg-blue-50 focus:text-primary">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Delay Reasons
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onNavigate('historical-trends')} className="cursor-pointer hover:bg-blue-50/50 active:bg-blue-100 active:scale-95 transition-all duration-200 focus:bg-blue-50 focus:text-primary">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Historical Trends
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="ghost"
+                onClick={() => onNavigate('analytics')}
+                className={getButtonClass('analytics')}
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analytics
+              </Button>
             </div>
           </div>
 
