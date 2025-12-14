@@ -68,13 +68,19 @@ class TrackedFlightSerializer(serializers.ModelSerializer):
             'destination', 
             'status', 
             'estimatedDelay', 
-            'departureTime'
+            'departureTime',
+            'arrivalTime',
+            'gate',
+            'terminal',
+            'baggage_claim',
+            'aircraft_type',
+            'airline'
         )
         
         # --- THIS IS THE FIX ---
         # We must also mark 'origin' and 'destination' as read-only,
         # just like the other fields populated by the server.
-        read_only_fields = ('origin', 'destination', 'status', 'estimatedDelay', 'departureTime')
+        read_only_fields = ('origin', 'destination', 'status', 'estimatedDelay', 'departureTime', 'arrivalTime', 'gate', 'terminal', 'baggage_claim', 'aircraft_type', 'airline')
 
 class AlertSerializer(serializers.ModelSerializer):
     class Meta:

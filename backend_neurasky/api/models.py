@@ -12,6 +12,8 @@ class TrackedFlight(models.Model):
     status = models.CharField(max_length=50, null=True, blank=True)
     estimatedDelay = models.IntegerField(null=True, blank=True)
     departureTime = models.DateTimeField(null=True, blank=True)
+    arrivalTime = models.DateTimeField(null=True, blank=True)
+    airline = models.CharField(max_length=100, null=True, blank=True)
     
     origin = models.CharField(max_length=10, null=True, blank=True)
     destination = models.CharField(max_length=10, null=True, blank=True)

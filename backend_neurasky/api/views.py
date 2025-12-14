@@ -116,12 +116,99 @@ class TrackedFlightView(generics.ListCreateAPIView):
     def get_queryset(self):
         return TrackedFlight.objects.filter(user=self.request.user)
     def perform_create(self, serializer):
-        tracked_flight = serializer.save(user=self.request.user)
-        if not tracked_flight.status:
-            tracked_flight.status = "Scheduled"
-        if not tracked_flight.estimatedDelay:
-            tracked_flight.estimatedDelay = 0
-        tracked_flight.save()
+        import random
+        from datetime import datetime, timedelta
+        
+        # AIRPORT_DATA for Simulation
+        AIRPORTS = ['KUL', 'PEN', 'BKI', 'KCH', 'LGK', 'JHB', 'SIN', 'HKG', 'NRT', 'LHR', 'SYD']
+        AIRLINES = {
+            'MH': 'Malaysia Airlines', 'AK': 'AirAsia', 'OD': 'Batik Air', 
+            'SQ': 'Singapore Airlines', 'CX': 'Cathay Pacific', 'JL': 'Japan Airlines'
+        }
+        
+        user = self.request.user
+        data = self.request.data
+        
+        # 1. Basic Info
+        flight_number = data.get('flight_number', 'MH123').upper()
+        force_delay = data.get('simulate_delay', False) # Check for boolean flag
+        
+        # 2. Simulate Route if missing
+        origin = 'KUL' # Default origin
+        possible_dests = [a for a in AIRPORTS if a != origin]
+        destination = random.choice(possible_dests)
+        
+        # 3. Simulate Schedule
+        # If date is not provided, use today. If provided, parse it.
+        now = timezone.now()
+        
+        # Random departure hour (06:00 to 22:00)
+        dep_hour = random.randint(6, 22) 
+        dep_minute = random.choice([0, 15, 30, 45])
+        departure_time = now.replace(hour=dep_hour, minute=dep_minute, second=0, microsecond=0)
+        
+        # Calculate Arrival Time (Approx duration based on distance)
+        # We can reuse get_estimated_distance logic or just rough it: 1h for local, 4h international
+        # For simplicity, let's map a few:
+        duration_mins = 60 # Default to 1 hour (e.g. KUL-PEN)
+        if destination in ['HKG', 'NRT', 'SYD', 'LHR', 'DXB']:
+            duration_mins = 360 + random.randint(0, 300) # 6-11 hours
+        elif destination in ['SIN', 'BKI', 'KCH']:
+            duration_mins = 90 + random.randint(0, 30)
+            
+        arrival_time = departure_time + timedelta(minutes=duration_mins)
+        
+        # 4. Simulate Gate/Terminal
+        terminal = random.choice(['1', '2'])
+        gate_prefix = random.choice(['G', 'H', 'A', 'B'])
+        gate_number = random.randint(1, 20)
+        gate = f"{gate_prefix}{gate_number}"
+        
+        # 5. Simulate Status
+        # 80% On Time, 15% Delayed, 5% Cancelled
+        rand_val = random.random()
+        
+        if force_delay or rand_val < 0.15: # Forced delay OR natural random delay (shifted probability logic for presentation)
+             # Actually let's keep original prob but override if force_delay is True
+             pass
+
+        if force_delay:
+            status_val = "Delayed"
+            delay = random.choice([45, 60, 90, 120, 180]) # Make it a significant delay
+            reason = "Weather Conditions"
+            arrival_time += timedelta(minutes=delay)
+        elif rand_val < 0.80:
+            status_val = "On Time"
+            delay = 0
+            reason = "Operational"
+        elif rand_val < 0.95:
+            status_val = "Delayed"
+            delay = random.choice([15, 30, 45, 60, 90, 120])
+            reason = random.choice(["Weather", "Technical", "Late Arrival"])
+            arrival_time += timedelta(minutes=delay)
+        else:
+            status_val = "Cancelled"
+            delay = 0
+            reason = "Operational"
+            
+        # 6. Save
+        tracked_flight = serializer.save(
+            user=user,
+            origin=origin,
+            destination=destination,
+            departureTime=departure_time,
+            arrivalTime=arrival_time, 
+            gate=gate,
+            terminal=terminal,
+            status=status_val,
+            estimatedDelay=delay,
+            baggage_claim=f"B{random.randint(1,10)}" if status_val != "Cancelled" else None,
+            # Extract airline code for aircraft type logic
+            aircraft_type = random.choice(['B737-800', 'A320neo', 'A330-300', 'B787-9']),
+            airline = AIRLINES.get(flight_number[:2], "Unknown Airline") if flight_number[:2] in AIRLINES else random.choice(list(AIRLINES.values()))
+        )
+        
+        # 7. Log History (Stats)
         FlightHistory.objects.create(
             flight_number=tracked_flight.flight_number,
             airline=tracked_flight.flight_number[:2],

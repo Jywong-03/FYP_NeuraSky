@@ -23,7 +23,12 @@ export function MyFlights({ user, onNavigate, onLogout }) {
   
   const [flightNumber, setFlightNumber] = useState('');
   const [flightDate, setFlightDate] = useState(undefined);
+  const [simulateDelay, setSimulateDelay] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Helper function to get today's date in YYYY-MM-DD format
   function getTodayDate() {
@@ -37,44 +42,11 @@ export function MyFlights({ user, onNavigate, onLogout }) {
       // 1. Fetch stored flights
       const storedFlights = await api.get('/flights/');
       
-      if (storedFlights.length === 0) {
-        setFlights([]);
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Fetch live status for each
-      const flightPromises = storedFlights.map(flight => {
-        const date = flight.date || getTodayDate();
-        return api.get(`/flight-status/${flight.flight_number}/${date}/`)
-          .then(live => ({ ...flight, live })) // Attach live data to the flight object
-          .catch(() => ({ ...flight, live: null })); // Keep flight even if live fetch fails
-      });
-
-      const results = await Promise.all(flightPromises);
-
-      // 3. Merge and Map
-      const mergedFlights = results.map(item => {
-        const live = item.live;
-        if (!live) return item; // Return stored item if live fetch failed
-
-        return {
-          ...item, // Keep original stored fields (id, etc.)
-          
-          // Overwrite with live data where available
-          flight_number: live.number || item.flight_number,
-          origin: live.departure?.airport?.iata || item.origin,
-          destination: live.arrival?.airport?.iata || item.destination,
-          
-          departureTime: live.departure?.scheduledTimeLocal || item.departureTime,
-          // arrivalTime: live.arrival?.scheduledTimeLocal, // Optional, if you want to add it
-
-          status: live.status ? live.status.toLowerCase().replace(/ /g, '-') : item.status,
-          estimatedDelay: live.departure?.delay?.minutes || 0,
-        };
-      });
-
-      setFlights(mergedFlights);
+      // Since we are now in "Simulation Mode", the stored flights contain 
+      // all the necessary simulated data (Status, Delay, Gate). 
+      // We no longer need to fetch "live" data which might overwrite our demo scenarios.
+      
+      setFlights(storedFlights);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -95,7 +67,8 @@ export function MyFlights({ user, onNavigate, onLogout }) {
     try {
       await api.post('/flights/', {
         flight_number: flightNumber,
-        date: flightDate ? format(flightDate, 'yyyy-MM-dd') : ''
+        date: flightDate ? format(flightDate, 'yyyy-MM-dd') : '',
+        simulate_delay: simulateDelay 
       });
       
       await fetchFlights(); 
@@ -189,9 +162,24 @@ export function MyFlights({ user, onNavigate, onLogout }) {
                   </PopoverContent>
                 </Popover>
               </div>
+
+              
+              <div className="flex items-center space-x-2 md:col-span-3 md:justify-end">
+                  <input 
+                    type="checkbox" 
+                    id="simulate-delay" 
+                    checked={simulateDelay} 
+                    onChange={(e) => setSimulateDelay(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Label htmlFor="simulate-delay" className="text-sm text-muted-foreground font-medium cursor-pointer">
+                    Simulate Delay (Demo Mode)
+                  </Label>
+              </div>
+
               <Button 
                 type="submit" 
-                className="md:self-end bg-blue-600! hover:bg-blue-700! text-white! font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-150" 
+                className="md:col-span-3 md:ml-auto bg-blue-600! hover:bg-blue-700! text-white! font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-150 w-full md:w-auto" 
                 disabled={isAdding}
               >
                 {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Add Flight'}
@@ -230,13 +218,44 @@ export function MyFlights({ user, onNavigate, onLogout }) {
 
           {!isLoading && !error && flights.length > 0 && (
             <div className="space-y-4">
-                {flights.map((flight) => (
-                <FlightCard
-                    key={flight.id}
-                    flight={flight}
-                    onDelete={() => handleDeleteFlight(flight.id)}
-                />
+            <div className="space-y-4">
+                {flights
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((flight) => (
+                    <FlightCard
+                        key={flight.id}
+                        flight={flight}
+                        onDelete={() => handleDeleteFlight(flight.id)}
+                    />
                 ))}
+                
+                {/* Pagination Controls */}
+                {flights.length > itemsPerPage && (
+                  <div className="flex justify-center items-center gap-4 mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="w-24 bg-white hover:bg-gray-50 text-foreground border-border disabled:opacity-50"
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Page {currentPage} of {Math.ceil(flights.length / itemsPerPage)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(flights.length / itemsPerPage), p + 1))}
+                      disabled={currentPage >= Math.ceil(flights.length / itemsPerPage)}
+                      className="w-24 bg-white hover:bg-gray-50 text-foreground border-border disabled:opacity-50"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+            </div>
             </div>
           )}
         </div>

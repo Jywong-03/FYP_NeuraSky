@@ -6,16 +6,46 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Plane, Clock, Calendar, ArrowRight, Trash2, MapPin } from 'lucide-react';
 
-export function FlightCard({ flight, onDelete }) {
+const AIRLINE_CODES = {
+    'MH': 'Malaysia Airlines',
+    'AK': 'AirAsia',
+    'OD': 'Batik Air', 
+    'SQ': 'Singapore Airlines',
+    'CX': 'Cathay Pacific',
+    'JL': 'Japan Airlines',
+    'TR': 'Scoot',
+    'EK': 'Emirates',
+    'QR': 'Qatar Airways'
+};
+
+const AIRPORT_NAMES = {
+    'KUL': 'Kuala Lumpur International',
+    'PEN': 'Penang International',
+    'BKI': 'Kota Kinabalu International',
+    'KCH': 'Kuching International',
+    'LGK': 'Langkawi International',
+    'JHB': 'Senai International',
+    'SIN': 'Singapore Changi',
+    'HKG': 'Hong Kong International',
+    'NRT': 'Narita International',
+    'LHR': 'London Heathrow',
+    'SYD': 'Sydney Kingsford Smith'
+};
+
+export function FlightCard({ flight, onDelete, showRemove = true }) {
+    // Derive airline from flight number if backend info is missing
+    const airlineName = flight.airline && flight.airline !== 'Unknown Airline' 
+        ? flight.airline 
+        : (AIRLINE_CODES[flight.flight_number?.substring(0,2)?.toUpperCase()] || 'Unknown Airline');
 
   // Helper function to format status
   const getStatusBadge = (status) => {
     const safeStatus = status?.toLowerCase() || 'unknown';
 
     if (safeStatus.includes('delayed')) {
-      return <Badge variant="destructive" className="animate-pulse shadow-sm border-red-500/50">Delayed</Badge>;
+      return <Badge className="bg-red-100 text-red-700 border-red-500/20 shadow-sm animate-pulse hover:bg-red-200">Delayed</Badge>;
     }
-    if (safeStatus.includes('on-time')) {
+    if (safeStatus.includes('on-time') || safeStatus.includes('on time')) {
       return <Badge className="bg-green-100 text-green-700 border-green-500/20 shadow-sm hover:bg-green-200">On-Time</Badge>;
     }
     if (safeStatus.includes('scheduled')) {
@@ -54,6 +84,16 @@ export function FlightCard({ flight, onDelete }) {
     }
   };
 
+  const calculateDuration = (start, end) => {
+    if (!start || !end) return '';
+    const diff = new Date(end) - new Date(start);
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const flightDuration = calculateDuration(flight.departureTime, flight.arrivalTime);
+
   return (
     <Card className="mb-4 group hover:shadow-md transition-all duration-300 border border-border border-t-4 border-t-blue-500 bg-white shadow-sm">
       <CardContent className="p-5">
@@ -69,7 +109,7 @@ export function FlightCard({ flight, onDelete }) {
                 {getStatusBadge(flight.status)}
               </div>
               <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
-                <span className="uppercase tracking-widest text-xs">{flight.airline || 'Unknown Airline'}</span>
+                <span className="uppercase tracking-widest text-xs">{airlineName}</span>
                 {flight.aircraft_type && (
                   <>
                     <span className="text-muted-foreground/50">•</span>
@@ -116,7 +156,8 @@ export function FlightCard({ flight, onDelete }) {
                     </div>
                   </div>
                </div>
-               <span className="text-xs text-muted-foreground mt-4 font-medium font-mono">
+               <span className="text-xs text-muted-foreground mt-4 font-medium font-mono flex flex-col items-center">
+                 {flightDuration && <span className="mb-1 text-foreground font-semibold bg-muted/50 px-2 py-0.5 rounded">{flightDuration}</span>}
                  {flight.estimatedDelay > 0 
                    ? <span className="text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.3)]">+{flight.estimatedDelay}m DELAY</span>
                    : <span className="text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.3)]">ON TIME</span>
@@ -130,6 +171,13 @@ export function FlightCard({ flight, onDelete }) {
                 <MapPin className="w-3 h-3" /> Destination
               </span>
               <span className="text-2xl font-black text-foreground tracking-tight">{flight.destination?.toUpperCase() || 'N/A'}</span>
+              <span className="text-xs text-muted-foreground font-medium truncate max-w-[150px]">
+                {AIRPORT_NAMES[flight.destination?.toUpperCase()] || 'Airport'}
+              </span>
+              <div className="flex items-center gap-2 justify-end mt-1 text-muted-foreground text-sm font-mono">
+                  <Clock className="w-3 h-3 text-primary" />
+                  <span>{formatTime(flight.arrivalTime || flight.departureTime)}</span>
+              </div>
               {flight.baggage_claim && <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground mt-1 border border-border">Carousel {flight.baggage_claim}</span>}
             </div>
           </div>
@@ -155,17 +203,19 @@ export function FlightCard({ flight, onDelete }) {
           )}
 
           {/* Actions */}
-          <div className="flex justify-end pt-2 border-t border-border">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 group-hover:opacity-100 transition-all opacity-80"
-              onClick={onDelete}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Remove Flight
-            </Button>
-          </div>
+          {showRemove && (
+            <div className="flex justify-end pt-2 border-t border-border">
+                <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 group-hover:opacity-100 transition-all opacity-80"
+                onClick={() => onDelete(flight.id)}
+                >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remove Flight
+                </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -29,6 +29,16 @@ export function AlertNotifications() {
     fetchInitialAlerts();
   }, []); // Runs once on mount
 
+  // --- Show latest unread alert on mount for visibility
+  useEffect(() => {
+    if (alerts.length > 0 && !alerts[0].read) {
+       toast(alerts[0].title, {
+          description: alerts[0].message,
+          action: { label: 'View', onClick: () => setShowPanel(true) }
+       });
+    }
+  }, [alerts.length]); // Run when alerts are loaded
+
   // --- This useEffect now POLLS for new alerts instead of faking them
   useEffect(() => {
     if (!alertsEnabled) return;
@@ -57,7 +67,7 @@ export function AlertNotifications() {
       } catch (error) {
         console.error("Failed to poll for new alerts:", error);
       }
-    }, 30000); // Check every 30 seconds
+    }, 5000); // Check every 5 seconds for demo/dev
 
     return () => clearInterval(interval);
   }, [alertsEnabled, alerts]);

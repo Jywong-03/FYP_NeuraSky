@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { FlightCard } from './FlightCard';
 import { DelayAnalytics } from './DelayAnalytics';
@@ -10,6 +11,12 @@ import { Search, TrendingUp, AlertTriangle, CheckCircle, Clock } from 'lucide-re
 import { Skeleton } from './ui/skeleton'; // Import Skeleton for loading
 import { toast } from 'sonner';
 import { api } from '../../utils/api';
+import dynamic from 'next/dynamic';
+
+const LiveFlightMap = dynamic(() => import('./LiveFlightMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400">Loading Map Engine...</div>
+});
 
 // Helper function to get today's date in YYYY-MM-DD format
 function getTodayDate() {
@@ -24,6 +31,9 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   const [liveFlights, setLiveFlights] = useState([]); // This will hold the full flight data
   const [filteredFlights, setFilteredFlights] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -55,7 +65,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
           return {
             id: flight.id,
             flight_number: flight.flight_number,
-            airline: flight.airline || 'Airline', // Ensure 'airline' field exists in model or fallback
+            airline: flight.airline, // Should rely on component fallback or null
             // In our populate script, we didn't explicitly set 'airline' field on TrackedFlight model??
             // Wait, TrackedFlight model in `models.py` doesn't seem to have 'airline'. 
             // Let me check models.py again. If not, I'll assume it's part of flight_number or just hardcode for valid demo.
@@ -127,7 +137,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
               <h1 className="text-4xl font-bold mb-2 tracking-tight">
-                Network Overview
+                Dashboard Overview
               </h1>
               <p className="text-blue-100 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
@@ -208,15 +218,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
           </h2>
 
           <div className="w-full h-[600px] mb-8 rounded-xl overflow-hidden shadow-md border border-blue-200 bg-white relative">
-             <iframe 
-               src="https://map.opensky-network.org/" 
-               width="100%" 
-               height="100%" 
-               style={{ border: 'none' }}
-               title="OpenSky Live Flight Map"
-               loading="lazy"
-               className="w-full h-full"
-             />
+              <LiveFlightMap flights={filteredFlights} />
           </div>
 
           <h3 className="text-xl font-semibold text-foreground mb-4">Your Tracked Flights</h3>
@@ -230,9 +232,40 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
           ) : (
             <div className="space-y-4">
               {filteredFlights.length > 0 ? (
-                filteredFlights.map((flight) => (
-                  <FlightCard key={flight.id} flight={flight} />
-                ))
+                <>
+                  {filteredFlights
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((flight) => (
+                    <FlightCard key={flight.id} flight={flight} showRemove={false} />
+                  ))}
+                  
+                  {/* Pagination Controls */}
+                  {filteredFlights.length > itemsPerPage && (
+                    <div className="flex justify-center items-center gap-4 mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="w-24 bg-white hover:bg-gray-50 text-foreground border-border disabled:opacity-50"
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Page {currentPage} of {Math.ceil(filteredFlights.length / itemsPerPage)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredFlights.length / itemsPerPage), p + 1))}
+                        disabled={currentPage >= Math.ceil(filteredFlights.length / itemsPerPage)}
+                        className="w-24 bg-white hover:bg-gray-50 text-foreground border-border disabled:opacity-50"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12 rounded-lg border border-border bg-card/20">
                    <p className="text-muted-foreground">No live flights active in current session.</p>
