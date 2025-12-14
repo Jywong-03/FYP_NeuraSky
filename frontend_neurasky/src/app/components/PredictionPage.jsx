@@ -5,6 +5,7 @@ import { Navigation } from './Navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { CloudRain, Sun, Cloud, AlertTriangle, CheckCircle2, Plane } from 'lucide-react';
 import { toast } from 'sonner';
@@ -163,23 +164,24 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Flight Number (Optional)</Label>
-                  <input 
-                    type="text" 
-                    className="flex h-10 w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+                  <Label htmlFor="flight-number" className="text-foreground">Flight Number (Optional)</Label>
+                  <Input
+                    id="flight-number"
                     placeholder="e.g. MH123"
+                    value={formData.flight_number}
                     onChange={(e) => setFormData({...formData, flight_number: e.target.value})}
+                    className="bg-white border-border text-foreground focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                   />
                 </div>
-
+                
                 <Button 
                   onClick={handlePredict} 
                   disabled={loading}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 transform hover:scale-[1.02]"
+                  className="w-full bg-blue-600! hover:bg-blue-700! text-white! font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-150 h-11"
                 >
                   {loading ? (
                     <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       Analyzing Route...
                     </div>
                   ) : (

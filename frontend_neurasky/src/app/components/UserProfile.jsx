@@ -29,7 +29,7 @@ const formatMemberSince = (dateString) => {
       <Navigation user={user} currentPage="profile" onNavigate={onNavigate} onLogout={onLogout} />
       
       {/* Corporate Hero Header */}
-      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+      <div className="bg-blue-900 text-white shadow-md mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
              <User className="w-8 h-8" />
@@ -50,7 +50,7 @@ const formatMemberSince = (dateString) => {
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-center gap-8 mb-6">
                 <div className="relative">
-                   <div className="absolute top-0 w-full h-[300px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+                   <div className="absolute top-0 w-full h-[300px] bg-linear-to-b from-primary/5 to-transparent pointer-events-none" />
                    <Avatar className="w-24 h-24 border-2 border-primary/20 shadow-2xl relative z-10">
                     <AvatarFallback className="bg-linear-to-br from-gray-900 to-black text-primary text-3xl font-bold border border-border">
                         {user.name ? user.name.charAt(0).toUpperCase() : '?'}

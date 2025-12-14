@@ -24,6 +24,14 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   const [liveFlights, setLiveFlights] = useState([]); // This will hold the full flight data
   const [filteredFlights, setFilteredFlights] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // This hook will fetch live data for the user's tracked flights
   useEffect(() => {
@@ -109,12 +117,12 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   return (
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       <div className="fixed inset-0 -z-10 bg-background">
-        <div className="absolute top-0 w-full h-[500px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+        <div className="absolute top-0 w-full h-[500px] bg-linear-to-b from-primary/5 to-transparent pointer-events-none" />
       </div>
 
       <Navigation user={user} currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
       
-      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md">
+      <div className="bg-blue-900 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
@@ -127,7 +135,13 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
               </p>
             </div>
             <div className="text-right hidden md:block">
-               <p className="text-sm text-blue-100 font-mono opacity-80">{getTodayDate()}</p>
+               <p className="text-sm text-blue-100 font-mono opacity-80 decoration-slice">
+                 {currentTime.toLocaleDateString('en-GB', {
+                   year: 'numeric',
+                   month: '2-digit',
+                   day: '2-digit',
+                 }).split('/').reverse().join('-')} <span className="text-white font-bold">{currentTime.toLocaleTimeString('en-GB', { hour12: false })}</span>
+               </p>
             </div>
           </div>
         </div>
@@ -190,8 +204,23 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
         {/* Flight List */}
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-foreground mb-6 flex items-center gap-2">
-            <span className="text-primary">Live</span> Traffic
+            <span className="text-primary">Live</span> Flight Map
           </h2>
+
+          <div className="w-full h-[600px] mb-8 rounded-xl overflow-hidden shadow-md border border-blue-200 bg-white relative">
+             <iframe 
+               src="https://map.opensky-network.org/" 
+               width="100%" 
+               height="100%" 
+               style={{ border: 'none' }}
+               title="OpenSky Live Flight Map"
+               loading="lazy"
+               className="w-full h-full"
+             />
+          </div>
+
+          <h3 className="text-xl font-semibold text-foreground mb-4">Your Tracked Flights</h3>
+
           {isLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-32 w-full rounded-lg bg-card/50" />

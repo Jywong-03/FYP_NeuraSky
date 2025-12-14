@@ -29,7 +29,7 @@ export function Navigation({ user, currentPage, onNavigate, onLogout }) {
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
               <Image src="/NeuraSky.svg" alt="NeuraSky Logo" width={48} height={48} className="w-12 h-12 drop-shadow-md" />
-              <span className="text-xl font-bold bg-gradient-to-r from-primary via-cyan-400 to-blue-500 bg-clip-text text-transparent tracking-wider">
+              <span className="text-xl font-bold text-primary tracking-wider">
                 NEURASKY
               </span>
             </div>
@@ -97,7 +97,7 @@ export function Navigation({ user, currentPage, onNavigate, onLogout }) {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary transition-all duration-300">
+                <button className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-blue-400 active:scale-95 transition-all duration-200">
                   <Avatar>
                     <AvatarFallback className="bg-primary/20 text-primary border border-primary/50">
                       {user.name.charAt(0)}

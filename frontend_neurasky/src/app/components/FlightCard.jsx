@@ -110,7 +110,7 @@ export function FlightCard({ flight, onDelete }) {
             <div className="flex flex-col items-center justify-center relative w-full px-4">
                <div className="w-full flex items-center gap-2 text-slate-300 relative">
                   {/* Digital Dash Line */}
-                  <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent relative">
+                  <div className="h-px w-full bg-primary/20 relative">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-1 border border-primary/30 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.4)] z-10">
                       <Plane className="w-5 h-5 text-primary rotate-90" />
                     </div>

@@ -42,14 +42,14 @@ function Calendar({
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "size-8 p-0 font-normal aria-selected:opacity-100",
+          "size-8 p-0 font-normal aria-selected:opacity-100 hover:bg-blue-50 active:scale-90 transition-all duration-150 ease-out",
         ),
         day_range_start:
-          "day-range-start aria-selected:bg-primary aria-selected:text-primary-foreground",
+          "day-range-start aria-selected:bg-blue-600 aria-selected:text-white",
         day_range_end:
-          "day-range-end aria-selected:bg-primary aria-selected:text-primary-foreground",
+          "day-range-end aria-selected:bg-blue-600 aria-selected:text-white",
         day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+          "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white shadow-md shadow-blue-500/20 active:scale-95",
         day_today: "bg-accent text-accent-foreground",
         day_outside:
           "day-outside text-muted-foreground aria-selected:text-muted-foreground",

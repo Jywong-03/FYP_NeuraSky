@@ -56,7 +56,7 @@ export function DelayDurationPage({ user, onNavigate, onLogout }) {
       <Navigation user={user} currentPage="delay-duration" onNavigate={onNavigate} onLogout={onLogout} />
       
       {/* Corporate Hero Header */}
-      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+      <div className="bg-blue-900 text-white shadow-md mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">

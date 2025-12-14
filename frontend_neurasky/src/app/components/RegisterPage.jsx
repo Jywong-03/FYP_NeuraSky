@@ -31,9 +31,9 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
         <div className="text-center mb-8">
           <div className="relative inline-block">
              {/* <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" /> Removed for cleaner look */}
-             <Image src="/NeuraSky.svg" alt="NeuraSky Logo" width={96} height={96} className="w-24 h-24 mb-4 mx-auto relative z-10 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]" />
+             <Image src="/NeuraSky.svg" alt="NeuraSky Logo" width={96} height={96} className="w-24 h-24 mb-4 mx-auto relative z-10 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]" />
           </div>
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight mb-2">NeuraSky</h1>
+          <h1 className="text-4xl font-bold text-primary tracking-tight mb-2">NeuraSky</h1>
           <p className="text-muted-foreground font-mono text-sm">Flight Delay Information & Alert System</p>
         </div>
 
@@ -52,7 +52,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary/50"
+                  className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                   required
                 />
               </div>
@@ -64,7 +64,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                   className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary/50"
+                   className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                   required
                 />
               </div>
@@ -76,7 +76,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                   className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary/50"
+                   className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                   required
                 />
               </div>
@@ -88,11 +88,11 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                   className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary/50"
+                   className="bg-white border-border text-foreground placeholder:text-muted-foreground/50 focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] transition-all duration-300">
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-150">
                 Create Account
               </Button>
             </form>

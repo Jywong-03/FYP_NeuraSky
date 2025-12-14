@@ -11,14 +11,18 @@ import { toast } from 'sonner';
 import { Loader2, Plane } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { api } from '../../utils/api';
-
+import { Calendar } from './ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from './ui/utils';
 export function MyFlights({ user, onNavigate, onLogout }) {
   const [flights, setFlights] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
   const [flightNumber, setFlightNumber] = useState('');
-  const [flightDate, setFlightDate] = useState('');
+  const [flightDate, setFlightDate] = useState(undefined);
   const [isAdding, setIsAdding] = useState(false);
 
   // Helper function to get today's date in YYYY-MM-DD format
@@ -91,7 +95,7 @@ export function MyFlights({ user, onNavigate, onLogout }) {
     try {
       await api.post('/flights/', {
         flight_number: flightNumber,
-        date: flightDate
+        date: flightDate ? format(flightDate, 'yyyy-MM-dd') : ''
       });
       
       await fetchFlights(); 
@@ -127,8 +131,8 @@ export function MyFlights({ user, onNavigate, onLogout }) {
       <Navigation user={user} currentPage="my-flights" onNavigate={onNavigate} onLogout={onLogout} />
       
       {/* Corporate Hero Header */}
-      <div className="absolute top-0 w-full h-[300px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+      <div className="absolute top-0 w-full h-[300px] bg-linear-to-b from-primary/5 to-transparent pointer-events-none" />
+      <div className="bg-blue-900 text-white shadow-md mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
              <Plane className="w-8 h-8" />
@@ -156,21 +160,40 @@ export function MyFlights({ user, onNavigate, onLogout }) {
                   value={flightNumber}
                   onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
                   required
-                  className="bg-white border-border text-foreground focus:ring-2 focus:ring-primary/20"
+                  className="bg-white border-border text-foreground focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="flight-date" className="text-foreground">Date</Label>
-                <Input
-                  id="flight-date"
-                  type="date"
-                  value={flightDate}
-                  onChange={(e) => setFlightDate(e.target.value)}
-                  required
-                  className="bg-background/50 border-border text-foreground scheme-dark"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal border-border bg-white text-foreground hover:bg-gray-50 focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200",
+                        !flightDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {flightDate ? format(flightDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={flightDate}
+                      onSelect={setFlightDate}
+                      initialFocus
+                      className="bg-white border-border text-foreground"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <Button type="submit" className="md:self-end bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20" disabled={isAdding}>
+              <Button 
+                type="submit" 
+                className="md:self-end bg-blue-600! hover:bg-blue-700! text-white! font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-150" 
+                disabled={isAdding}
+              >
                 {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Add Flight'}
               </Button>
             </form>

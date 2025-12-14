@@ -162,7 +162,7 @@ export function AlertNotifications() {
           variant="ghost"
           size="icon"
           onClick={() => setShowPanel(!showPanel)}
-          className="relative text-primary hover:text-primary hover:bg-primary/10 transition-colors"
+          className="relative text-primary hover:text-primary hover:bg-blue-100 active:bg-blue-200 active:scale-95 transition-all duration-200 rounded-full h-10 w-10"
         >
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
@@ -171,107 +171,110 @@ export function AlertNotifications() {
             </span>
           )}
         </Button>
-      </div>
 
-      {/* Notification Panel */}
-      {showPanel && (
-        <div className="fixed top-16 right-4 w-96 z-50 animate-in fade-in slide-in-from-top-5 duration-300">
-          <Card className="border-primary/20 shadow-2xl bg-card text-foreground shadow-primary/10">
-            <div className="p-3 border-b border-border bg-muted/20">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-foreground flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-primary" />
-                  Notifications
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowPanel(false)}
-                  className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-2">
+        {/* Notification Panel */}
+        {showPanel && (
+          <div className="absolute top-full mt-2 right-0 w-80 z-60 animate-in fade-in slide-in-from-top-2 duration-200">
+            <Card className="border-border shadow-xl bg-white! text-foreground ring-1 ring-black/5">
+              <div className="p-4 border-b border-border bg-white rounded-t-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                    <div className="bg-blue-100 p-1.5 rounded-full">
+                      <Bell className="w-4 h-4 text-blue-600" />
+                    </div>
+                    Notifications
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                     {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={markAllAsRead}
+                        className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
+                      >
+                        Mark all read
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowPanel(false)}
+                      className="h-7 w-7 text-muted-foreground hover:bg-red-50 hover:text-red-500 active:scale-95 transition-all duration-200 rounded-full"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-muted/30 p-2 rounded-md">
+                  <span className="text-xs font-medium text-muted-foreground">Real-time alerts</span>
                   <Switch
                     checked={alertsEnabled}
                     onCheckedChange={setAlertsEnabled}
-                    className="data-[state=checked]:bg-primary"
+                    className="scale-75 data-[state=checked]:bg-blue-600"
                   />
-                  <span className="text-sm text-muted-foreground">Real-time alerts</span>
                 </div>
-                {unreadCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={markAllAsRead}
-                    className="text-xs text-primary hover:text-primary hover:bg-primary/10"
-                  >
-                    Mark all read
-                  </Button>
-                )}
               </div>
-            </div>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[400px]">
-                {alerts.length === 0 ? (
-                  <div className="p-12 text-center text-muted-foreground">
-                    <Bell className="w-12 h-12 mx-auto mb-3 opacity-20 text-primary" />
-                    <p className="text-sm">No new notifications</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {alerts.map((alert) => (
-                      <div
-                        key={alert.id}
-                        className={`p-4 hover:bg-muted transition-colors cursor-pointer ${
-                          !alert.read ? 'bg-primary/5' : ''
-                        }`}
-                        onClick={() => markAsRead(alert.id)}
-                      >
-                        <div className="flex gap-3">
-                          <div className={`p-2 rounded-lg ${getSeverityColor(alert.severity)} shrink-0 h-fit`}>
-                            {getAlertIcon(alert.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className={`text-sm font-semibold ${!alert.read ? 'text-foreground' : 'text-muted-foreground'}`}>{alert.title}</p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteAlert(alert.id);
-                                }}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
+              <CardContent className="p-0 bg-white rounded-b-lg">
+                <ScrollArea className="h-[400px]">
+                  {alerts.length === 0 ? (
+                    <div className="p-12 text-center text-muted-foreground">
+                      <Bell className="w-12 h-12 mx-auto mb-3 opacity-20 text-primary" />
+                      <p className="text-sm">No new notifications</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {alerts.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className={`p-4 hover:bg-muted transition-colors cursor-pointer ${
+                            !alert.read ? 'bg-blue-50/50' : ''
+                          }`}
+                          onClick={() => markAsRead(alert.id)}
+                        >
+                          <div className="flex gap-3">
+                            <div className={`p-2 rounded-lg ${getSeverityColor(alert.severity)} shrink-0 h-fit`}>
+                              {getAlertIcon(alert.type)}
                             </div>
-                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{alert.message}</p>
-                            <div className="flex items-center gap-2">
-                              {alert.flightNumber && (
-                                <Badge variant="outline" className="border-primary/30 text-primary text-[10px] h-5 px-1.5 font-mono">
-                                  {alert.flightNumber}
-                                </Badge>
-                              )}
-                              <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-auto">
-                                <Clock className="w-3 h-3" />
-                                {formatTimestamp(alert.timestamp)}
-                              </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className={`text-sm font-semibold ${!alert.read ? 'text-foreground' : 'text-muted-foreground'}`}>{alert.title}</p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteAlert(alert.id);
+                                  }}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{alert.message}</p>
+                              <div className="flex items-center gap-2">
+                                {alert.flightNumber && (
+                                  <Badge variant="outline" className="border-blue-200 text-blue-600 text-[10px] h-5 px-1.5 font-mono bg-blue-50">
+                                    {alert.flightNumber}
+                                  </Badge>
+                                )}
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-auto">
+                                  <Clock className="w-3 h-3" />
+                                  {formatTimestamp(alert.timestamp)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </>
+
   );
 }

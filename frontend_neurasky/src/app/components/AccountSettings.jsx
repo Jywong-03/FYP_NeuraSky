@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
-import { Settings } from 'lucide-react';
+import { Settings, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -31,6 +31,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -49,8 +50,10 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     if (newPassword !== confirmPassword) {
       toast.error('New passwords do not match');
+      setIsLoading(false);
       return;
     }
     
@@ -99,8 +102,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
       <Navigation user={user} currentPage="settings" onNavigate={onNavigate} onLogout={onLogout} />
       
       {/* Corporate Hero Header */}
-      <div className="absolute top-0 w-full h-[300px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-      <div className="bg-gradient-to-r from-primary to-blue-800 text-white shadow-md mb-8">
+      <div className="absolute top-0 w-full h-[300px] bg-linear-to-b from-primary/5 to-transparent pointer-events-none" />
+      <div className="bg-blue-900 text-white shadow-md mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
              <Settings className="w-8 h-8" />
@@ -203,7 +206,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         required
-                        className="bg-white border-border text-foreground"
+                        className="bg-white border-border text-foreground focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                       />
                     </div>
                     <div className="space-y-2">
@@ -214,7 +217,7 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
-                        className="bg-white border-border text-foreground"
+                        className="bg-white border-border text-foreground focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                       />
                     </div>
                     <div className="space-y-2">
@@ -225,27 +228,27 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        className="bg-white border-border text-foreground"
+                        className="bg-white border-border text-foreground focus:border-blue-500 focus:ring-4 focus:ring-blue-400/20 transition-all duration-200"
                       />
                     </div>
-                    <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20">
-                      Update Password
+                    <Button type="submit" className="bg-blue-600! hover:bg-blue-700! text-white! font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-150">
+                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Update Password'}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
 
-              <Card className="bg-red-950/20 border-red-500/20 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+              <Card className="bg-red-50 border-red-200 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
                 <CardHeader>
-                  <CardTitle className="text-red-400">Delete Account</CardTitle>
-                  <CardDescription className="text-red-300/70">Permanently delete your account and all associated data.</CardDescription>
+                  <CardTitle className="text-red-700">Delete Account</CardTitle>
+                  <CardDescription className="text-red-600/80">Permanently delete your account and all associated data.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="bg-red-500/20 hover:bg-red-500/30 text-red-500 border border-red-500/50 hover:border-red-500 shadow-sm">Delete Account</Button>
+                      <Button variant="destructive" className="bg-red-600! hover:bg-red-700! text-white! font-bold shadow-lg shadow-red-500/20 active:scale-95 transition-all duration-150 border-none">Delete Account</Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-card border-border text-foreground">
+                    <AlertDialogContent className="bg-white! dark:bg-zinc-950! border-border text-foreground shadow-xl z-60">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription className="text-muted-foreground">
@@ -254,8 +257,8 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-transparent border-border text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white">
+                        <AlertDialogCancel className="bg-white border-border text-foreground hover:bg-zinc-100">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white border-none">
                           Yes, delete my account
                         </AlertDialogAction>
                       </AlertDialogFooter>
