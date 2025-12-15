@@ -5,11 +5,10 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { Dashboard } from './components/Dashboard';
 import { MyFlights } from './components/MyFlights';
+import { Predict } from './components/Predict';
+import { Analytics } from './components/Analytics';
 import { UserProfile } from './components/UserProfile';
 import { AccountSettings } from './components/AccountSettings';
-import { DelayDurationPage } from './components/DelayDurationPage';
-import { DelayReasonsPage } from './components/DelayReasonsPage';
-import { HistoricalTrendsPage } from './components/HistoricalTrendsPage';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { API_BASE_URL } from './config';
@@ -202,6 +201,24 @@ export default function App() {
         />
       )}
       
+      {currentPage === 'predict' && (
+        <Predict 
+          user={user} 
+          onNavigate={setCurrentPage}
+          onLogout={handleLogout}
+          authToken={authToken}
+        />
+      )}
+
+      {currentPage === 'analytics' && (
+        <Analytics 
+          user={user} 
+          onNavigate={setCurrentPage}
+          onLogout={handleLogout}
+          authToken={authToken}
+        />
+      )}
+
       {currentPage === 'profile' && (
         <UserProfile 
           user={user} 
@@ -219,29 +236,9 @@ export default function App() {
         />
       )}
       
-      {currentPage === 'delay-duration' && (
-        <DelayDurationPage 
-          user={user} 
-          onNavigate={setCurrentPage}
-          onLogout={handleLogout}
-        />
-      )}
       
-      {currentPage === 'delay-reasons' && (
-        <DelayReasonsPage 
-          user={user} 
-          onNavigate={setCurrentPage}
-          onLogout={handleLogout}
-        />
-      )}
       
-      {currentPage === 'historical-trends' && (
-        <HistoricalTrendsPage 
-          user={user} 
-          onNavigate={setCurrentPage}
-          onLogout={handleLogout}
-        />
-      )}
+    
     </div>
   );
 }
