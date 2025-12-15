@@ -29,7 +29,7 @@ services:
       - DB_PORT=3306
       - DB_NAME=neurasky_db
       - DB_USER=root
-      - DB_PASSWORD=9999
+      - DB_PASSWORD=${DB_PASSWORD}
     volumes:
       - ./backend_neurasky:/app  # Hot-reloading for development
 
@@ -42,6 +42,7 @@ services:
       - backend
     ports:
       - "3000:3000"
+    command: npm run dev
     environment:
       # Tell Next.js where the API is located
       - NEXT_PUBLIC_API_URL=http://localhost:8000
