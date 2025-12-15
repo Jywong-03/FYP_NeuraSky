@@ -26,6 +26,7 @@ from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.mail import send_mail
 
 from .serializers import (
     RegisterSerializer, UserProfileSerializer, TrackedFlightSerializer, 
@@ -316,7 +317,8 @@ def get_new_alerts(request):
         if flight.estimatedDelay and flight.estimatedDelay > 15:
             already_alerted = Alert.objects.filter(user=request.user, flightNumber=flight.flight_number, type='delay').exists()
             if not already_alerted:
-                Alert.objects.create(
+                # Create Alert
+                alert = Alert.objects.create(
                     user=request.user,
                     title=f"Flight {flight.flight_number} Delayed",
                     message=f"Your flight to {flight.destination} is delayed by {flight.estimatedDelay} minutes.",
@@ -324,6 +326,21 @@ def get_new_alerts(request):
                     severity='high',
                     flightNumber=flight.flight_number
                 )
+                
+                # Send Email if enabled
+                try:
+                    if hasattr(request.user, 'profile') and request.user.profile.emailNotifications:
+                        send_mail(
+                            subject=f"⚠️ Flight Delay Alert: {flight.flight_number}",
+                            message=f"Dear {request.user.username},\n\nYour flight {flight.flight_number} to {flight.destination} is currently delayed by {flight.estimatedDelay} minutes.\n\nPlease check the dashboard for more details.\n\nSafe travels,\nNeuraSky Team",
+                            from_email=None, # Uses DEFAULT_FROM_EMAIL
+                            recipient_list=[request.user.email],
+                            fail_silently=True,
+                        )
+                        print(f"📧 Email sent to {request.user.email}")
+                except Exception as e:
+                    print(f"Failed to send email: {e}")
+
     alerts = Alert.objects.filter(user=request.user, id__gt=since_id).order_by('-timestamp')
     serializer = AlertSerializer(alerts, many=True)
     return Response(serializer.data)
