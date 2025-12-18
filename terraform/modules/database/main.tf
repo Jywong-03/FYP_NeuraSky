@@ -17,9 +17,9 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 ###########################################################
 resource "aws_db_instance" "db_instance" {
   identifier     = lower("${var.vpc_name}-db")
-  engine         = "mysql"        # SQL Server Express Edition
-  engine_version = "8.0"          # SQL Server 2019
-  instance_class = "db.t3.medium" # Upgraded for performance
+  engine         = "mysql"       # SQL Server Express Edition
+  engine_version = "8.0"         # SQL Server 2019
+  instance_class = "db.t3.micro" # Free tier eligible
 
   allocated_storage = 20 # 20 GB of storage
   storage_type      = "gp3"
@@ -30,7 +30,7 @@ resource "aws_db_instance" "db_instance" {
   password = var.db_password
 
   # --- High Availability (Your "master/slave" requirement) ---
-  multi_az = true
+  multi_az = false # Set to false for Free Tier
 
   # --- Security & Networking ---
   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
