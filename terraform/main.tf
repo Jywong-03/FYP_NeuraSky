@@ -141,27 +141,42 @@ module "web_server" {
               apt-get update
               apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-              # 2. Clone Repository
-              cd /home/ubuntu
-              git clone https://github.com/jywong-03/fyp_neurasky.git
-              cd fyp_neurasky
+              # 2. Create Production Docker Compose File
+              # We write this directly to ensure we use the correct Production setup (No local DB, No Volumes)
+              cat <<EOT > docker-compose.yml
+              version: '3.8'
+              services:
+                backend:
+                  image: jywong75/neurasky-backend:Production
+                  container_name: neurasky_backend
+                  restart: always
+                  ports:
+                    - "8000:8000"
+                  environment:
+                    - DB_HOST=${module.database.db_address}
+                    - DB_PORT=3306
+                    - DB_NAME=neurasky_db
+                    - DB_USER=admin
+                    - DB_PASSWORD=neuraskypassword123
+                  command: >
+                    sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
 
-              # 3. Create .env file for Backend
-              # Using the RDS Endpoint from the database module
-              echo "DB_HOST=${module.database.db_address}" >> backend_neurasky/.env
-              echo "DB_PORT=3306" >> backend_neurasky/.env
-              echo "DB_NAME=neurasky_db" >> backend_neurasky/.env
-              echo "DB_USER=admin" >> backend_neurasky/.env
-              echo "DB_PASSWORD=neuraskypassword123" >> backend_neurasky/.env
+                frontend:
+                  image: jywong75/neurasky-frontend:Production
+                  container_name: neurasky_frontend
+                  restart: always
+                  ports:
+                    - "3000:3000"
+                  environment:
+                    - NEXT_PUBLIC_API_URL=http://${module.alb.alb_dns_name}:3000/api 
+                  depends_on:
+                    - backend
+              EOT
 
-              # 4. Start Application
-              # The ALB forwards port 80 -> Instance Port 3000 (Target Group Default).
-              # Ensure the frontend runs on 3000.
-              # BUT: We also have a backend on 8000. 
-              # In a simple Mono-ASG setup, the ALB usually forwards /api to 8000 and / to 3000.
-              # The sample module 'alb' creates one Target Group attached to one port.
-              # For simplicity, we assume the Frontend is the main entry point.
-              docker compose up -d --build
+              # 3. Start Application
+              # We use the file we just created
+              docker compose up -d
+
               EOF
 }
 

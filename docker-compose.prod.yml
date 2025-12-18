@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Backend Service (Django)
+  backend:
+    image: jywong75/neurasky-backend:Production # Using the image built by GitHub Actions
+    container_name: neurasky_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      # Initial migration might be needed if not done in Dockerfile
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Frontend Service (Next.js)
+  frontend:
+    image: jywong75/neurasky-frontend:Production # Using the image built by GitHub Actions
+    container_name: neurasky_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # In production, the browser needs to talk to the backend.
+      # Since we don't have a domain yet, we will use the Load Balancer DNS or public handling.
+      # However, for client-side fetches, 'localhost' won't work for the user.
+      # Ideally this should be data.aws_lb.app_lb.dns_name but we can't inject that easily into circular dep.
+      # For now, we rely on the fact that they are in the same network or use relative paths if proxied.
+      # But since we are accessing port 3000 directly via LB, the valid API URL is actually the LB URL.
+      # Let's try to infer or use relative if possible, but Next.js usually needs absolute for server side.
+      - NEXT_PUBLIC_API_URL=/api # We might need Nginx to route /api -> 8000
+    depends_on:
+      - backend
