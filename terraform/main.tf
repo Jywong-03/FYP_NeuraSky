@@ -1,6 +1,20 @@
-provider "aws" {
-  region = "us-east-1" # Or your preferred region
+terraform {
+  backend "s3" {
+    bucket         = "neurasky-fyp-terraform-state"
+    key            = "global/s3/terraform.tfstate"
+    region         = "ap-southeast-1"
+    dynamodb_table = "neurasky-terraform-locks"
+    encrypt        = true
+  }
 }
+
+provider "aws" {
+  region = "ap-southeast-1"
+}
+
+# ... (rest of the file)
+
+
 
 # 1. Create a Virtual Private Cloud (VPC) - The network for your app
 resource "aws_vpc" "neurasky_vpc" {
@@ -13,8 +27,15 @@ resource "aws_vpc" "neurasky_vpc" {
 resource "aws_subnet" "neurasky_subnet" {
   vpc_id            = aws_vpc.neurasky_vpc.id
   cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = "ap-southeast-1a"
   tags              = { Name = "neurasky-subnet" }
+}
+
+resource "aws_subnet" "neurasky_subnet_b" {
+  vpc_id            = aws_vpc.neurasky_vpc.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-southeast-1b"
+  tags              = { Name = "neurasky-subnet-b" }
 }
 
 # 3. Create an Internet Gateway - So your server can talk to the internet
@@ -104,9 +125,25 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
+# Get the latest Ubuntu 22.04 AMI for the current region
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 # The EC2 Instance
 resource "aws_instance" "app_server" {
-  ami                         = "ami-0c7217cdde317cfec" # Ubuntu 22.04 LTS (us-east-1) - Check for current AMI ID
+  ami                         = data.aws_ami.ubuntu.id
   instance_type               = "t2.micro"
   subnet_id                   = aws_subnet.neurasky_subnet.id
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
@@ -115,11 +152,36 @@ resource "aws_instance" "app_server" {
   # This script runs when the server turns on for the first time
   user_data = <<-EOF
               #!/bin/bash
+              
+              # 1. Install Docker & Docker Compose
               apt-get update
-              apt-get install -y python3-pip python3-venv git
+              apt-get install -y ca-certificates curl gnupg
+              install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              chmod a+r /etc/apt/keyrings/docker.gpg
+              echo \
+                "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+                "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+                tee /etc/apt/sources.list.d/docker.list > /dev/null
+              apt-get update
+              apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+              # 2. Clone Repository
+              cd /home/ubuntu
               git clone https://github.com/jywong-03/fyp_neurasky.git
               cd fyp_neurasky
-              # Install dependencies, setup .env, run migrations...
+
+              # 3. Create .env file for Backend (Injecting Terraform variables)
+              # Note: In production, pass these securely!
+              echo "DB_HOST=${aws_db_instance.default.address}" >> backend_neurasky/.env
+              echo "DB_PORT=3306" >> backend_neurasky/.env
+              echo "DB_NAME=neurasky_db" >> backend_neurasky/.env
+              echo "DB_USER=admin" >> backend_neurasky/.env
+              echo "DB_PASSWORD=neuraskypassword123" >> backend_neurasky/.env
+              # Add other env vars here as needed
+
+              # 4. Start Application
+              docker compose up -d --build
               EOF
 
   tags = {
