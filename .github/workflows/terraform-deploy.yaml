@@ -1,93 +1,65 @@
-name: "Terraform Deploy"
+name: Terraform Deployment
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'terraform/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'terraform/**'
+      - "terraform/**"
   workflow_dispatch:
 
 permissions:
   contents: read
+  id-token: write # Required for assuming roles if we use OIDC, but good to have
 
 env:
-  TF_LOG: INFO
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_REGION: 'ap-southeast-1'
+  AWS_REGION: ap-southeast-1
 
 jobs:
-  terraform:
-    name: "Terraform Apply"
+  deploy:
+    name: Deploy Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash
         working-directory: ./terraform
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Clean Terraform cache
+        run: |
+          rm -rf .terraform terraform.tfstate terraform.tfstate.backup
 
-      - name: Terraform Format
-        run: terraform fmt -check
+      - name: Terraform Format - Format Check
+        run: terraform fmt -check -recursive
 
-      - name: Terraform Validate
+      - name: Terraform Initial - Initialize (uses backend)
+        run: terraform init -reconfigure -upgrade
+
+      - name: Terraform Validate - Validate configuration
         run: terraform validate
 
-      - name: Terraform Plan
-        id: plan
-        if: github.event_name == 'pull_request'
-        run: terraform plan -no-color -input=false
-        continue-on-error: true
-
-      - name: Update Pull Request
-        uses: actions/github-script@v6
-        if: github.event_name == 'pull_request'
+      - name: Terraform Plan - Plan deployment
         env:
-          PLAN: ${{ steps.plan.outputs.stdout }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          # TF_VAR_project_name: "NeuraSky" (Defaults in variables.tf are fine)
+        run: terraform plan -out=tfplan
 
-            <details><summary>Show Plan</summary>
-
-            \`\`\`terraform
-            ${process.env.PLAN}
-            \`\`\`
-
-            </details>
-
-            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
-
-      - name: Terraform Apply
+      - name: Terraform Apply - Apply changes
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: terraform apply -auto-approve -input=false
+        env:
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        run: terraform apply -auto-approve tfplan
