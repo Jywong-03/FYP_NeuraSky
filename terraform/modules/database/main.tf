@@ -39,7 +39,7 @@ resource "aws_db_instance" "db_instance" {
   port                   = 3306  # MySQL default port
 
   # --- Backup & Maintenance ---
-  backup_retention_period = 7
+  backup_retention_period = 1
   skip_final_snapshot     = true # Set to false for production
 
   tags = {
