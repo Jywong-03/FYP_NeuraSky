@@ -33,6 +33,7 @@ urlpatterns = [
          name='flight-status'),
 
     # Enhanced ML Prediction Endpoints
+    path('health/', views.health_check, name='health-check'),
     path('predict/', 
         views.predict_delay, 
         name='predict-flight'),

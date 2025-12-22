@@ -496,6 +496,11 @@ class RouteForecastView(APIView):
         })
 
 
+
+@csrf_exempt
+def health_check(request):
+    return JsonResponse({'status': 'healthy'}, status=200)
+
 @csrf_exempt
 def predict_delay(request):
     if request.method != 'POST':
