@@ -29,13 +29,7 @@ resource "aws_security_group" "web_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    description     = "Allow Backend traffic from ALB"
-    from_port       = 8000
-    to_port         = 8000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lb_sg.id]
-  }
+
 
   dynamic "ingress" {
     for_each = var.enable_web_ssh ? [1] : []
@@ -200,22 +194,7 @@ resource "aws_security_group" "lb_sg" {
   }
 
   # Outbound only to web servers (HTTP)
-  egress {
-    description     = "Allow traffic to Web Servers"
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id]
-  }
 
-  # Outbound to web servers (Backend Port 8000)
-  egress {
-    description     = "Allow traffic to Web Servers (Backend)"
-    from_port       = 8000
-    to_port         = 8000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id]
-  }
 
   # Optional: Allow health checks and internal ALB traffic
   egress {
@@ -257,7 +236,45 @@ resource "aws_security_group" "api_lb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+
   tags = {
     Name = "${var.vpc_name}-api-lb-sg"
   }
+}
+
+############################################################
+# Standalone Security Group Rules (to avoid cycles)
+############################################################
+
+# Web SG: Allow Ingress from LB SG (Backend Port 8000)
+resource "aws_security_group_rule" "web_sg_ingress_backend" {
+  type                     = "ingress"
+  from_port                = 8000
+  to_port                  = 8000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.web_sg.id
+  source_security_group_id = aws_security_group.lb_sg.id
+  description              = "Allow Backend traffic from ALB"
+}
+
+# LB SG: Allow Egress to Web SG (Frontend Port 3000)
+resource "aws_security_group_rule" "lb_sg_egress_frontend" {
+  type                     = "egress"
+  from_port                = 3000
+  to_port                  = 3000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.lb_sg.id
+  source_security_group_id = aws_security_group.web_sg.id
+  description              = "Allow traffic to Web Servers (Frontend)"
+}
+
+# LB SG: Allow Egress to Web SG (Backend Port 8000)
+resource "aws_security_group_rule" "lb_sg_egress_backend" {
+  type                     = "egress"
+  from_port                = 8000
+  to_port                  = 8000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.lb_sg.id
+  source_security_group_id = aws_security_group.web_sg.id
+  description              = "Allow traffic to Web Servers (Backend)"
 }
