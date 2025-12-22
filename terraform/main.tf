@@ -122,7 +122,8 @@ module "web_server" {
   asg_desired_capacity = 1
   asg_max_size         = 2
 
-  alb_target_group_arn = module.alb.alb_target_group_arn
+  frontend_target_group_arn = module.alb.alb_target_group_arn
+  backend_target_group_arn  = module.alb.alb_backend_target_group_arn
 
   # This User Data installs Docker and runs the NeuraSky App
   user_data = <<-EOF
@@ -157,7 +158,7 @@ module "web_server" {
                     - DB_PORT=3306
                     - DB_NAME=neurasky_db
                     - DB_USER=admin
-                    - DB_PASSWORD=neuraskypassword123
+                    - DB_PASSWORD=${var.db_password}
                   command: >
                     sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
 
@@ -168,7 +169,7 @@ module "web_server" {
                   ports:
                     - "3000:3000"
                   environment:
-                    - NEXT_PUBLIC_API_URL=http://${module.alb.alb_dns_name}:3000/api 
+                    - NEXT_PUBLIC_API_URL=http://${module.alb.alb_dns_name}/api 
                   depends_on:
                     - backend
               EOT

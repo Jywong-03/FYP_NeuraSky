@@ -63,3 +63,9 @@ variable "certificate_arn" {
   type        = string
   default     = ""
 }
+
+variable "backend_port" {
+  description = "Port for the backend target group"
+  type        = number
+  default     = 8000
+}

@@ -29,6 +29,14 @@ resource "aws_security_group" "web_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description     = "Allow Backend traffic from ALB"
+    from_port       = 8000
+    to_port         = 8000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lb_sg.id]
+  }
+
   dynamic "ingress" {
     for_each = var.enable_web_ssh ? [1] : []
     content {
@@ -196,6 +204,15 @@ resource "aws_security_group" "lb_sg" {
     description     = "Allow traffic to Web Servers"
     from_port       = 3000
     to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.web_sg.id]
+  }
+
+  # Outbound to web servers (Backend Port 8000)
+  egress {
+    description     = "Allow traffic to Web Servers (Backend)"
+    from_port       = 8000
+    to_port         = 8000
     protocol        = "tcp"
     security_groups = [aws_security_group.web_sg.id]
   }

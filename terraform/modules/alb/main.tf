@@ -56,6 +56,50 @@ resource "aws_lb_listener" "http_listener" {
   }
 }
 
+
+###############################################
+# Target Group for Backend (Port 8000)
+###############################################
+resource "aws_lb_target_group" "tg_backend" {
+  name     = "${var.vpc_name}-${var.name_prefix}-tg-back"
+  port     = var.backend_port
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    enabled             = true
+    path                = "/api/health/" # Assuming Django/Backend has this or root
+    matcher             = "200-499"
+    interval            = 30
+    healthy_threshold   = 3
+    unhealthy_threshold = 2
+    port                = var.backend_port
+  }
+
+  tags = {
+    Name = "${var.vpc_name}-${var.name_prefix}-tg-back"
+  }
+}
+
+###############################################
+# ALB Listener Rule - Forward /api/* to Backend
+###############################################
+resource "aws_lb_listener_rule" "api_rule" {
+  listener_arn = aws_lb_listener.http_listener.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg_backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+}
+
 ###############################################
 # Optional Future HTTPS Listener (Port 443)
 ###############################################

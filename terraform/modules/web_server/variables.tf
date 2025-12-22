@@ -60,7 +60,13 @@ variable "tags" {
   default = {}
 }
 
-variable "alb_target_group_arn" {
+
+variable "frontend_target_group_arn" {
+  type    = string
+  default = ""
+}
+
+variable "backend_target_group_arn" {
   type    = string
   default = ""
 }

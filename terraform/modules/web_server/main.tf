@@ -138,10 +138,10 @@ resource "aws_autoscaling_group" "web_asg" {
     version = "$Latest"
   }
 
-  health_check_type         = var.alb_target_group_arn != "" ? "ELB" : "EC2"
+  health_check_type         = var.frontend_target_group_arn != "" ? "ELB" : "EC2"
   health_check_grace_period = var.health_check_grace_period
 
-  target_group_arns = var.alb_target_group_arn != "" ? [var.alb_target_group_arn] : null
+  target_group_arns = [var.frontend_target_group_arn, var.backend_target_group_arn]
 
   tag {
     key                 = "Name"
