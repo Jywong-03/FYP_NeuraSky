@@ -61,4 +61,22 @@ variable "db_password" {
   sensitive   = true
 }
 
+# =========================================================
+# Application Variables
+# =========================================================
+
+variable "secret_key" {
+  description = "Django Secret Key"
+  type        = string
+  default     = "django-insecure-change-me-in-production!"
+  sensitive   = true
+}
+
+variable "rapidapi_key" {
+  description = "RapidAPI Key for Flight Data"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # Note: Domain and Alerting variables removed as they are not used in the initial refactor.

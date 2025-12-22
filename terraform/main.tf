@@ -159,6 +159,8 @@ module "web_server" {
                     - DB_NAME=neurasky_db
                     - DB_USER=admin
                     - DB_PASSWORD=${var.db_password}
+                    - SECRET_KEY=${var.secret_key}
+                    - RAPIDAPI_KEY=${var.rapidapi_key}
                   command: >
                     sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
 
