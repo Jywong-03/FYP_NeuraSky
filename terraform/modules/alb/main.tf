@@ -30,7 +30,7 @@ resource "aws_lb_target_group" "tg" {
   health_check {
     enabled             = true
     path                = "/"
-    matcher             = "200-499"
+    matcher             = "200-510"
     interval            = 30
     healthy_threshold   = 3
     unhealthy_threshold = 2
@@ -69,7 +69,7 @@ resource "aws_lb_target_group" "tg_backend" {
   health_check {
     enabled             = true
     path                = "/api/health/" # Assuming Django/Backend has this or root
-    matcher             = "200-499"
+    matcher             = "200-510"
     interval            = 30
     healthy_threshold   = 3
     unhealthy_threshold = 2
