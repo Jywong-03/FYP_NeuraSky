@@ -47,7 +47,9 @@ jobs:
       - name: Initialize Terraform (load remote state)
         run: terraform init -reconfigure -upgrade
 
-      - name: Terraform Destroy (Auto Approve)
+      - name: Terraform Destroy
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
+
         run: terraform destroy -auto-approve

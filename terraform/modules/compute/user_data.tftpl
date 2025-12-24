@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Log everything
+exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+echo "Starting User Data Script..."
+
+# 1. Install Docker
+apt-get update
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 2. Create Docker Compose File
+mkdir -p /home/ubuntu/app
+cd /home/ubuntu/app
+
+cat <<EOT > docker-compose.yml
+version: '3.8'
+services:
+  backend:
+    image: jywong75/neurasky-backend:Production
+    container_name: neurasky_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=${db_host}
+      - DB_PORT=3306
+      - DB_NAME=${db_name}
+      - DB_USER=${db_user}
+      - DB_PASSWORD=${db_password}
+      - SECRET_KEY=${secret_key}
+
+      - ALLOWED_HOSTS=*
+    command: >
+      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  frontend:
+    image: jywong75/neurasky-frontend:Production
+    container_name: neurasky_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://${alb_dns_name}
+    depends_on:
+      - backend
+EOT
+
+# 3. Start Application
+docker compose up -d
+
+# 4. Wait loop to ensure services are up (Optional but good for debugging)
+echo "Waiting for services to start..."
+sleep 20
+docker compose ps

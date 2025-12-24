@@ -1,6 +1,3 @@
-############################################################
-# Root-Level Terraform Configuration for NeuraSky Project
-############################################################
 terraform {
   backend "s3" {
     bucket         = "neurasky-fyp-terraform-state"
@@ -15,181 +12,63 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Used for WAF/ACM if needed (Global resources)
-provider "aws" {
-  alias  = "us-east-1"
-  region = "us-east-1"
+# 1. Network Module
+module "network" {
+  source       = "./modules/network"
+  vpc_name     = var.vpc_name
+  vpc_cidr     = var.vpc_cidr
+  project_name = var.project_name
+  azs          = ["ap-southeast-1a", "ap-southeast-1b"]
 }
 
-############################################################
-# VPC Module
-############################################################
-module "vpc" {
-  source = "./modules/vpc"
-
-  vpc_name   = var.vpc_name
-  cidr_block = var.vpc_cidr
-  azs        = var.availability_zones
-
-  public_subnets = [
-    { name = "public-subnet-1", cidr = "10.0.1.0/24", az = "ap-southeast-1a" },
-    { name = "public-subnet-2", cidr = "10.0.2.0/24", az = "ap-southeast-1b" }
-  ]
-
-  # Simplified Private Subnets (1 per AZ)
-  private_subnets = [
-    { name = "private-subnet-1", cidr = "10.0.3.0/24", az = "ap-southeast-1a" },
-    { name = "private-subnet-2", cidr = "10.0.4.0/24", az = "ap-southeast-1b" }
-  ]
-
-  enable_nat_gateway = true
-  enable_multi_nat   = false # Save cost: only 1 NAT Gateway
-  single_nat_index   = 0
+# 2. Security Module
+module "security" {
+  source       = "./modules/security"
+  vpc_name     = var.vpc_name
+  vpc_id       = module.network.vpc_id
+  project_name = var.project_name
 }
 
-############################################################
-# Security Groups Module
-############################################################
-# We need to detect our IP for the bastion/admin access
-data "http" "my_ip" {
-  url = "https://checkip.amazonaws.com/"
-}
-locals {
-  admin_ip = "${chomp(data.http.my_ip.response_body)}/32"
-}
-
-module "security_groups" {
-  source   = "./modules/security_groups"
-  vpc_id   = module.vpc.vpc_id
-  vpc_name = var.vpc_name
-  admin_ip = local.admin_ip
-}
-
-############################################################
-# Database Layer Module (RDS - MySQL)
-############################################################
+# 3. Database Module
 module "database" {
-  source       = "./modules/database"
-  project_name = var.project_name
-  vpc_name     = var.vpc_name
-
-  private_subnet_ids = module.vpc.private_subnet_ids
-  db_sg_id           = module.security_groups.db_sg_id
-
-  db_name     = "neurasky_db"
-  db_username = "admin"
-  db_password = "neuraskypassword123" # In production, use Secrets Manager!
+  source             = "./modules/database"
+  vpc_name           = var.vpc_name
+  project_name       = var.project_name
+  private_subnet_ids = module.network.private_subnet_ids
+  db_sg_id           = module.security.db_sg_id
+  db_name            = "neurasky_db"
+  db_username        = var.db_username
+  db_password        = var.db_password
 }
 
-############################################################
-# Application Load Balancer Module (Public)
-############################################################
-module "alb" {
-  source       = "./modules/alb"
-  project_name = var.project_name
-  vpc_name     = var.vpc_name
-  vpc_id       = module.vpc.vpc_id
-  lb_sg_id     = module.security_groups.lb_sg_id
-  subnet_ids   = module.vpc.public_subnet_ids # ALB sits in public subnets
-  name_prefix  = "web"
-  is_internal  = false
-  target_port  = 3000 # Forwarding to Frontend Port
-  enable_https = false
-}
-
-############################################################
-# Web Server Module (Auto Scaling Group)
-############################################################
-module "web_server" {
-  source            = "./modules/web_server"
+# 4. Load Balancer Module
+module "loadbalancer" {
+  source            = "./modules/loadbalancer"
   vpc_name          = var.vpc_name
+  vpc_id            = module.network.vpc_id
   project_name      = var.project_name
-  public_subnet_ids = module.vpc.public_subnet_ids
-  web_sg_id         = module.security_groups.web_sg_id
-  key_name          = var.key_name
-  instance_type     = "t3.micro"
-  root_volume_size  = 10
-
-  # Note: The original sample used IAM Instance Profiles. 
-  # We are setting this merely to satisfy the module variable if required, 
-  # but if the module expects a profile that doesn't exist, we might need to create it 
-  # via the IAM module or set it to empty string if allowed.
-  # Checking usage: The sample created 'DDAC-web-ec2-profile'. We will create it below.
-  iam_instance_profile_name = module.iam_web.instance_profile_name
-  log_group_name            = "neurasky-web-logs"
-
-  asg_min_size         = 1
-  asg_desired_capacity = 1
-  asg_max_size         = 2
-
-  frontend_target_group_arn = module.alb.alb_target_group_arn
-  backend_target_group_arn  = module.alb.alb_backend_target_group_arn
-
-  # This User Data installs Docker and runs the NeuraSky App
-  user_data = <<-EOF
-              #!/bin/bash
-              
-              # 1. Install Docker & Docker Compose
-              apt-get update
-              apt-get install -y ca-certificates curl gnupg
-              install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              chmod a+r /etc/apt/keyrings/docker.gpg
-              echo \
-                "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-                "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-                tee /etc/apt/sources.list.d/docker.list > /dev/null
-              apt-get update
-              apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-              # 2. Create Production Docker Compose File
-              # We write this directly to ensure we use the correct Production setup (No local DB, No Volumes)
-              cat <<EOT > docker-compose.yml
-              version: '3.8'
-              services:
-                backend:
-                  image: jywong75/neurasky-backend:Production
-                  container_name: neurasky_backend
-                  restart: always
-                  ports:
-                    - "8000:8000"
-                  environment:
-                    - DB_HOST=${module.database.db_address}
-                    - DB_PORT=3306
-                    - DB_NAME=neurasky_db
-                    - DB_USER=admin
-                    - DB_PASSWORD=${var.db_password}
-                    - SECRET_KEY=${var.secret_key}
-                    - RAPIDAPI_KEY=${var.rapidapi_key}
-                  command: >
-                    sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-
-                frontend:
-                  image: jywong75/neurasky-frontend:Production
-                  container_name: neurasky_frontend
-                  restart: always
-                  ports:
-                    - "3000:3000"
-                  environment:
-                    - NEXT_PUBLIC_API_URL=http://${module.alb.alb_dns_name}/api 
-                  depends_on:
-                    - backend
-              EOT
-
-              # 3. Start Application
-              # We use the file we just created
-              docker compose up -d
-
-              EOF
+  public_subnet_ids = module.network.public_subnet_ids
+  alb_sg_id         = module.security.alb_sg_id
 }
 
-#############################################################
-# IAM Module (Required mostly for SSM/Instance Profile)
-############################################################
-module "iam_web" {
-  source                = "./modules/iam"
-  manage_role           = true
-  role_name             = "NeuraSky-web-ec2-role"
-  instance_profile_name = "NeuraSky-web-ec2-profile"
-  project               = var.project_name
+# 5. Compute Module
+module "compute" {
+  source             = "./modules/compute"
+  vpc_name           = var.vpc_name
+  vpc_id             = module.network.vpc_id
+  project_name       = var.project_name
+  private_subnet_ids = module.network.private_subnet_ids
+  app_sg_id          = module.security.app_sg_id
+
+  frontend_tg_arn = module.loadbalancer.frontend_tg_arn
+  backend_tg_arn  = module.loadbalancer.backend_tg_arn
+  alb_dns_name    = module.loadbalancer.alb_dns_name
+
+  # Secrets
+  db_address  = module.database.db_address
+  db_name     = "neurasky_db"
+  db_username = var.db_username
+  db_password = var.db_password
+  secret_key  = var.secret_key
+
 }

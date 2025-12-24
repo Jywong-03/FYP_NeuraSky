@@ -55,11 +55,13 @@ jobs:
       - name: Terraform Plan - Plan deployment
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-          # TF_VAR_project_name: "NeuraSky" (Defaults in variables.tf are fine)
+          TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
+
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply - Apply changes
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
         run: terraform apply -auto-approve tfplan
