@@ -92,6 +92,13 @@ resource "aws_autoscaling_group" "main" {
   health_check_type         = "ELB"
   health_check_grace_period = 600 # 10 Minutes for Docker Build/Pull
 
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
+
   tag {
     key                 = "Name"
     value               = "${var.vpc_name}-web-asg"
