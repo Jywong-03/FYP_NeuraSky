@@ -11,3 +11,4 @@ pandas
 cryptography
 requests
 lightgbm
+gunicorn

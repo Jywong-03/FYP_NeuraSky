@@ -41,7 +41,14 @@ services:
 
       - ALLOWED_HOSTS=*
     command: >
-      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+      sh -c "
+        echo 'Waiting for MySQL...'
+        while ! python -c 'import socket, os; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.settimeout(1); s.connect((os.environ[\"DB_HOST\"], 3306))' 2>/dev/null; do
+          sleep 5
+        done
+        echo 'MySQL is up! Starting...'
+        python manage.py migrate && gunicorn neurasky_backend.wsgi:application --bind 0.0.0.0:8000
+      "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s

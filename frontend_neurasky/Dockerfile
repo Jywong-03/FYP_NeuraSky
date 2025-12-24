@@ -14,11 +14,20 @@ RUN npm install --legacy-peer-deps
 # Copy the rest of the application source code
 COPY . .
 
+# Set a placeholder environment variable for build time
+ENV NEXT_PUBLIC_API_URL=APP_NEXT_PUBLIC_API_URL
+
 # Build the Next.js application
 RUN npm run build
 
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
 # Expose the port Next.js runs on
 EXPOSE 3000
+
+# Set the entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Start the application
 CMD ["npm", "start"]
