@@ -2,7 +2,7 @@ Django>=5.0
 djangorestframework
 djangorestframework-simplejwt
 django-cors-headers
-mysql-connector-python
+mysqlclient
 python-dotenv
 joblib
 scikit-learn

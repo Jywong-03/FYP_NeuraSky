@@ -2,7 +2,9 @@
 set -e
 
 echo "Running Database Migrations..."
-# Try to migrate, but don't fail properly (or strictly fail? strict fail is better for consistency)
+echo "DEBUG: Listing /app/api to check for model files:"
+ls -la /app/api || echo "/app/api does not exist"
+
 # We use a loop to wait for DB if needed, though 'depends_on' in Docker Compose usually handles order, 
 # 'depends_on' doesn't wait for the DB port to be ready.
 # Simulating wait-for-it
