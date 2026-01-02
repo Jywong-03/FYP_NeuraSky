@@ -53,7 +53,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://${alb_dns_name}
+      - NEXT_PUBLIC_API_URL=https://${domain_name}
     depends_on:
       - backend
 EOT

@@ -64,6 +64,8 @@ module "compute" {
   frontend_tg_arn = module.loadbalancer.frontend_tg_arn
   backend_tg_arn  = module.loadbalancer.backend_tg_arn
   alb_dns_name    = module.loadbalancer.alb_dns_name
+  domain_name     = var.domain_name
+
 
   # Secrets
   db_address  = module.database.db_address

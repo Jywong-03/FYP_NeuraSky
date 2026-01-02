@@ -22,3 +22,5 @@ variable "db_password" {}
 variable "secret_key" {}
 
 variable "alb_dns_name" {}
+
+variable "domain_name" {}

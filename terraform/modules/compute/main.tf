@@ -63,6 +63,7 @@ resource "aws_launch_template" "main" {
     secret_key  = var.secret_key
 
     alb_dns_name = var.alb_dns_name
+    domain_name  = var.domain_name
   }))
 
   tag_specifications {
