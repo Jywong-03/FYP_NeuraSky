@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libgomp1 \
     curl \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
@@ -27,9 +28,9 @@ COPY . /app/
 # Expose the port Django runs on
 EXPOSE 8000
 
-# Make entrypoint executable
+# Make entrypoint executable and fix line endings
 COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh
+RUN dos2unix /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Set Entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]

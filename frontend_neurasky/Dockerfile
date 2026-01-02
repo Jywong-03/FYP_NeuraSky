@@ -20,8 +20,8 @@ ENV NEXT_PUBLIC_API_URL=APP_NEXT_PUBLIC_API_URL
 # Build the Next.js application
 RUN npm run build
 
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
+# Make entrypoint executable and fix line endings
+RUN apk add --no-cache dos2unix && dos2unix entrypoint.sh && chmod +x entrypoint.sh
 
 # Expose the port Next.js runs on
 EXPOSE 3000
