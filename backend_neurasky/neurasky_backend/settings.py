@@ -143,6 +143,8 @@ REST_FRAMEWORK = {
 # This tells Django to accept requests from your Next.js app
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://neurasky.click",
+    "https://www.neurasky.click",
 ]
 
 # Email Configuration (AWS SES)
