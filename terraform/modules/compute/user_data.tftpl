@@ -30,13 +30,6 @@ services:
       - DB_USER=${db_user}
       - DB_PASSWORD=${db_password}
       - SECRET_KEY=${secret_key}
-      # AWS SES
-      - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-      - AWS_SES_REGION_NAME=ap-southeast-1
-      - AWS_SES_ENDPOINT=email-smtp.ap-southeast-1.amazonaws.com
-      - AWS_SES_USER=${aws_ses_user}
-      - AWS_SES_PASSWORD=${aws_ses_password}
-      - DEFAULT_FROM_EMAIL=jywong12375@gmail.com
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s

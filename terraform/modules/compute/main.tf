@@ -64,9 +64,6 @@ resource "aws_launch_template" "main" {
 
     alb_dns_name = var.alb_dns_name
     domain_name  = var.domain_name
-
-    aws_ses_user     = var.aws_ses_user
-    aws_ses_password = var.aws_ses_password
   }))
 
   tag_specifications {

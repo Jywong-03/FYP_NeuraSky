@@ -37,13 +37,3 @@ variable "domain_name" {
   type        = string
   default     = "neurasky.click"
 }
-
-variable "aws_ses_user" {
-  description = "AWS SES SMTP Username"
-  sensitive   = true
-}
-
-variable "aws_ses_password" {
-  description = "AWS SES SMTP Password"
-  sensitive   = true
-}
