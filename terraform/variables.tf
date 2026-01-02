@@ -31,3 +31,9 @@ variable "secret_key" {
   sensitive = true
 }
 
+
+variable "domain_name" {
+  description = "The domain name for the website"
+  type        = string
+  default     = "neurasky.click"
+}
