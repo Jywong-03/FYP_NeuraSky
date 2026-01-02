@@ -49,7 +49,7 @@ module "loadbalancer" {
   project_name      = var.project_name
   public_subnet_ids = module.network.public_subnet_ids
   alb_sg_id         = module.security.alb_sg_id
-  certificate_arn   = aws_acm_certificate.main.arn
+  certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
 }
 
 # 5. Compute Module
