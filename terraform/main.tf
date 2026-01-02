@@ -74,6 +74,9 @@ module "compute" {
   db_password = var.db_password
   secret_key  = var.secret_key
 
+  # Email Secrets
+  aws_ses_user     = var.aws_ses_user
+  aws_ses_password = var.aws_ses_password
 }
 
 # 6. Route 53 DNS
