@@ -30,11 +30,6 @@ services:
       - DB_USER=${db_user}
       - DB_PASSWORD=${db_password}
       - SECRET_KEY=${secret_key}
-    # Override the image entrypoint to ensure we control startup
-    entrypoint: ""
-    command: >
-      sh -c "python manage.py migrate &&
-             gunicorn neurasky_backend.wsgi:application --bind 0.0.0.0:8000 --timeout 60 --workers 3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s
