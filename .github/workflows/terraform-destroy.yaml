@@ -51,5 +51,7 @@ jobs:
         env:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
           TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
+          TF_VAR_aws_ses_user: ${{ secrets.AWS_SES_USER }}
+          TF_VAR_aws_ses_password: ${{ secrets.AWS_SES_PASSWORD }}
 
         run: terraform destroy -auto-approve
