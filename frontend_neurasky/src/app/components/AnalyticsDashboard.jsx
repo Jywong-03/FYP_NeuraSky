@@ -36,6 +36,7 @@ export function AnalyticsDashboard({ user, onNavigate, onLogout }) {
   const [durationData, setDurationData] = useState([]);
   const [reasonsData, setReasonsData] = useState([]);
   const [trendsData, setTrendsData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(null);
 
   // Prediction States
   const [origin, setOrigin] = useState('KUL');
@@ -56,8 +57,21 @@ export function AnalyticsDashboard({ user, onNavigate, onLogout }) {
 
         // Process results safely
         if (results[0].status === 'fulfilled') setDurationData(results[0].value);
-        if (results[1].status === 'fulfilled') setReasonsData(results[1].value);
-        if (results[2].status === 'fulfilled') setTrendsData(results[2].value);
+        if (results[1].status === 'fulfilled') {
+          // Filter to keep only "On time" and "Delayed"
+          const filteredReasons = results[1].value.filter(item => 
+            ['On time', 'Delayed'].includes(item.name)
+          );
+          setReasonsData(filteredReasons);
+        }
+        if (results[2].status === 'fulfilled') {
+          setTrendsData(results[2].value);
+          // Set default year to the latest one available
+          if (results[2].value.length > 0) {
+              const years = [...new Set(results[2].value.map(d => d.month.split('-')[0]))].sort().reverse();
+              if (years.length > 0) setSelectedYear(years[0]);
+          }
+        }
         
         // Log errors if any
         results.forEach((res, index) => {
@@ -227,13 +241,34 @@ export function AnalyticsDashboard({ user, onNavigate, onLogout }) {
 
                 {/* Chart 3: Historical Trend */}
                 <Card className="bg-white">
-                    <CardHeader>
-                      <CardTitle>Historical Delay Trend</CardTitle>
-                      <CardDescription>Average delay minutes over past months</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <div className="space-y-1">
+                        <CardTitle>Historical Delay Trend</CardTitle>
+                        <CardDescription>Average delay minutes over past months</CardDescription>
+                      </div>
+                      <Select value={selectedYear || "All"} onValueChange={setSelectedYear}>
+                          <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Select Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="All">All Time</SelectItem>
+                              {[...new Set(trendsData.map(d => d.month.split('-')[0]))]
+                                  .sort()
+                                  .reverse()
+                                  .map(year => (
+                                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                                  ))
+                              }
+                          </SelectContent>
+                      </Select>
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={trendsData}>
+                        <LineChart data={
+                            selectedYear && selectedYear !== "All"
+                                ? trendsData.filter(d => d.month.startsWith(selectedYear))
+                                : trendsData
+                        }>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
                           <XAxis dataKey="month" axisLine={false} tickLine={false} dy={10} />
                           <YAxis axisLine={false} tickLine={false} />
