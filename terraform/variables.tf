@@ -37,3 +37,12 @@ variable "domain_name" {
   type        = string
   default     = "neurasky.click"
 }
+
+# AWS SES Secrets
+variable "aws_ses_user" {
+  sensitive = true
+}
+
+variable "aws_ses_password" {
+  sensitive = true
+}

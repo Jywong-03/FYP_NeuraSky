@@ -1,3 +1,4 @@
 .env
 /terraform-sample
 /workflows-sample
+/terraform/.terraform
