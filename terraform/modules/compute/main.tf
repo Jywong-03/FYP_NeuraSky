@@ -34,6 +34,17 @@ resource "aws_iam_role_policy" "secrets_access" {
           "ssm:GetParameters"
         ]
         Resource = "arn:aws:ssm:*:*:parameter/${var.project_name}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::neurasky-data-*",
+          "arn:aws:s3:::neurasky-data-*/*"
+        ]
       }
     ]
   })
@@ -69,6 +80,13 @@ resource "aws_launch_template" "main" {
     name = aws_iam_instance_profile.ec2_profile.name
   }
 
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      max_price = "0.015" # Optional: Set a max price or leave empty for on-demand price cap
+    }
+  }
+
   network_interfaces {
     security_groups = [var.app_sg_id]
   }
@@ -83,6 +101,9 @@ resource "aws_launch_template" "main" {
 
     alb_dns_name = var.alb_dns_name
     domain_name  = var.domain_name
+
+    # Data Bucket for Seeding
+    data_bucket_prefix = "neurasky-data-"
   }))
 
   tag_specifications {
@@ -91,6 +112,12 @@ resource "aws_launch_template" "main" {
       Name    = "${var.vpc_name}-web-instance"
       Project = var.project_name
     }
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required" # Enforce IMDSv2
+    http_put_response_hop_limit = 1
   }
 }
 

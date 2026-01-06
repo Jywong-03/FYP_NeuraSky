@@ -46,3 +46,8 @@ variable "aws_ses_user" {
 variable "aws_ses_password" {
   sensitive = true
 }
+
+variable "alert_email" {
+  description = "Email for Budget Alerts"
+  default     = "admin@neurasky.click" # Default placeholder
+}

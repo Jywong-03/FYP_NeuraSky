@@ -65,6 +65,45 @@ services:
       - backend
 EOT
 
+# 4. Auto-Seeding Database
+echo "Checking for database data..."
+# Install MySQL Client
+apt-get update && apt-get install mariadb-client -y
+
+# Wait for DB to be reachable
+echo "Waiting for DB at ${db_host}..."
+until mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD -e "SELECT 1"; do
+  echo "Database not ready, retrying..."
+  sleep 5
+done
+
+# Check if tables exist
+TABLE_COUNT=$(mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${db_name}';")
+
+if [ "$TABLE_COUNT" -eq "0" ]; then
+  echo "Database is empty. Attempting to seed..."
+  
+  # Find the bucket (since we used prefix, we list to find exact name)
+  DATA_BUCKET=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, '${data_bucket_prefix}')].Name" --output text | head -n 1)
+  
+  if [ -n "$DATA_BUCKET" ] && [ "$DATA_BUCKET" != "None" ]; then
+      echo "Found bucket: $DATA_BUCKET. Downloading dump..."
+      aws s3 cp s3://$DATA_BUCKET/neuraskyDB.sql neuraskyDB.sql
+      
+      if [ -f "neuraskyDB.sql" ]; then
+          echo "Importing dump..."
+          mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} < neuraskyDB.sql
+          echo "Database seeded successfully!"
+      else
+          echo "No neuraskyDB.sql found in bucket."
+      fi
+  else
+      echo "No data bucket found matching prefix."
+  fi
+else
+  echo "Database already contains $TABLE_COUNT tables. Skipping seeding."
+fi
+
 # 4. Start Application
 docker compose up -d
 

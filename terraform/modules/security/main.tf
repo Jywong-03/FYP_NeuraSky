@@ -54,15 +54,6 @@ resource "aws_security_group" "app_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
-  # Allow standard SSH if we need to debug via Jumpbox or if user switches to Public
-  ingress {
-    description = "SSH from Admin IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.admin_ip]
-  }
-
   egress {
     description = "Allow all outbound (for updates/docker pull)"
     from_port   = 0

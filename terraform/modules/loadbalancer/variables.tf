@@ -10,3 +10,8 @@ variable "certificate_arn" {
   description = "ARN of the SSL Certificate"
   type        = string
 }
+
+variable "s3_logs_bucket" {
+  description = "S3 Bucket for ALB Logs"
+  type        = string
+}

@@ -76,3 +76,34 @@ python manage.py test api
 ## 📝 License
 
 Academic Use Only.
+
+## ☁️ Infrastructure Deployment (Terraform)
+
+The infrastructure is managed via Terraform and deployed to AWS.
+
+### Highlights
+
+- **High Availability**: Multi-AZ Auto Scaling Group.
+- **Security**: Secrets in SSM, private DB, WAF-ready.
+- **Performance**: CloudFront CDN (Global Edge Network).
+- **Cost**: AWS Budgets integration.
+
+### Deployment
+
+1. **Initialize**:
+
+```bash
+cd terraform
+terraform init
+```
+
+2. **Deploy**:
+
+```bash
+terraform apply
+```
+
+3. **Outputs**:
+
+- `cloudfront_domain`: The URL to access the site.
+- `s3_logs_bucket`: Bucket containing ALB access logs.

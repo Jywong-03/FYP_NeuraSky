@@ -13,3 +13,7 @@ output "backend_tg_arn" {
 output "alb_zone_id" {
   value = aws_lb.main.zone_id
 }
+
+output "alb_name" {
+  value = aws_lb.main.arn_suffix # Returns "app/my-load-balancer/50dc6c495c0c9188" format
+}

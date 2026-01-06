@@ -10,6 +10,75 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = "Production"
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+# S3 Bucket for ALB Logs
+resource "aws_s3_bucket" "alb_logs" {
+  bucket        = "neurasky-alb-logs-${var.aws_region}"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    id     = "expire_old_logs"
+    status = "Enabled"
+
+    expiration {
+      days = 90
+    }
+  }
+}
+
+# Policy to allow ALB to write to bucket
+resource "aws_s3_bucket_policy" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::114774131450:root" # ELB Account ID for ap-southeast-1
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.alb_logs.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_s3_bucket_public_access_block" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# S3 Bucket for Database Dumps
+resource "aws_s3_bucket" "data" {
+  bucket_prefix = "neurasky-data-"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_public_access_block" "data" {
+  bucket = aws_s3_bucket.data.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 # 1. Network Module
@@ -50,6 +119,7 @@ module "loadbalancer" {
   public_subnet_ids = module.network.public_subnet_ids
   alb_sg_id         = module.security.alb_sg_id
   certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
+  s3_logs_bucket    = aws_s3_bucket.alb_logs.id
 }
 
 # 5. Compute Module
@@ -74,6 +144,17 @@ module "compute" {
   # Secrets removed, handled via SSM
 
   # SES Secrets removed, handled via SSM
+}
+
+# 8. CloudWatch Alarms
+module "cloudwatch" {
+  source       = "./modules/cloudwatch"
+  project_name = var.project_name
+  asg_name     = module.compute.asg_name
+  target_group_arns = [
+    module.loadbalancer.frontend_tg_arn,
+    module.loadbalancer.backend_tg_arn
+  ]
 }
 
 # SSM Parameters for Secrets
@@ -101,6 +182,21 @@ resource "aws_ssm_parameter" "ses_password" {
   value = var.aws_ses_password
 }
 
+# 9. CloudFront (Free Tier CDN)
+module "cloudfront" {
+  source       = "./modules/cloudfront"
+  project_name = var.project_name
+  alb_dns_name = module.loadbalancer.alb_dns_name
+  domain_name  = var.domain_name
+}
+
+# 10. AWS Budget (Cost Control)
+module "budget" {
+  source        = "./modules/budget"
+  project_name  = var.project_name
+  email_address = var.alert_email
+}
+
 # 6. Route 53 DNS
 data "aws_route53_zone" "main" {
   name = var.domain_name
@@ -112,9 +208,9 @@ resource "aws_route53_record" "www" {
   type    = "A"
 
   alias {
-    name                   = module.loadbalancer.alb_dns_name
-    zone_id                = module.loadbalancer.alb_zone_id
-    evaluate_target_health = true
+    name                   = module.cloudfront.cloudfront_domain_name
+    zone_id                = "Z2FDTNDATAQYW2" # CloudFront Global Zone ID
+    evaluate_target_health = false
   }
 }
 
@@ -144,4 +240,31 @@ resource "aws_route53_record" "cert_validation" {
 resource "aws_acm_certificate_validation" "main" {
   certificate_arn         = aws_acm_certificate.main.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+# 11. CloudWatch Dashboard (Overview)
+module "dashboard" {
+  source       = "./modules/dashboard"
+  project_name = var.project_name
+  asg_name     = module.compute.asg_name
+  alb_name     = module.loadbalancer.alb_name
+}
+
+# 12. Resource Group (Organization)
+resource "aws_resourcegroups_group" "main" {
+  name = "${var.project_name}-Resources"
+
+  resource_query {
+    query = <<JSON
+{
+  "ResourceTypeFilters": ["AWS::AllSupported"],
+  "TagFilters": [
+    {
+      "Key": "Project",
+      "Values": ["${var.project_name}"]
+    }
+  ]
+}
+JSON
+  }
 }
