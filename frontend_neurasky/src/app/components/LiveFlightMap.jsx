@@ -43,6 +43,7 @@ const planeIcon = new L.Icon({
 export default function LiveFlightMap({ flights: userFlights = [] }) {
   // Demo Mode State
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   useEffect(() => {
     fixLeafletIcons();

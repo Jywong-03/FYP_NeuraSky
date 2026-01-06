@@ -7,6 +7,9 @@ import { Badge } from './ui/badge';
 import { Plane, Clock, Calendar, ArrowRight, Trash2, MapPin, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../utils/api';
+import { API_BASE_URL } from '../config';
+
+
 
 const AIRLINE_CODES = {
     'MH': 'Malaysia Airlines',
@@ -264,7 +267,7 @@ END:VCALENDAR`;
                   <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`${api.defaults.baseURL}/flights/${flight.id}/certificate/`, '_blank')}
+                      onClick={() => window.open(`${API_BASE_URL}/flights/${flight.id}/certificate/`, '_blank')}
                       className="text-blue-600 hover:bg-blue-50 border-blue-200"
                       title="Download Delay Certificate (Insurance)"
                   >
