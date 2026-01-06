@@ -24,9 +24,13 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
+
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
 
 from .serializers import (
     RegisterSerializer, UserProfileSerializer, TrackedFlightSerializer, 
