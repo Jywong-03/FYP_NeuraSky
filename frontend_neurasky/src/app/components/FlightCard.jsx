@@ -4,7 +4,9 @@ import React from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plane, Clock, Calendar, ArrowRight, Trash2, MapPin } from 'lucide-react';
+import { Plane, Clock, Calendar, ArrowRight, Trash2, MapPin, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '../../utils/api';
 
 const AIRLINE_CODES = {
     'MH': 'Malaysia Airlines',
@@ -93,6 +95,44 @@ export function FlightCard({ flight, onDelete, showRemove = true }) {
   };
 
   const flightDuration = calculateDuration(flight.departureTime, flight.arrivalTime);
+
+  const handleAddToCalendar = () => {
+    const startTime = flight.departureTime ? new Date(flight.departureTime).toISOString().replace(/-|:|\.\d\d\d/g, "") : "";
+    const endTime = flight.arrivalTime ? new Date(flight.arrivalTime).toISOString().replace(/-|:|\.\d\d\d/g, "") : "";
+    
+    const title = `Flight ${flight.flight_number} to ${flight.destination}`;
+    const desc = `Flight Number: ${flight.flight_number}\nTo: ${flight.destination}\nAirline: ${airlineName}\nStatus: ${flight.status}`;
+    const loc = `${flight.origin} to ${flight.destination}`;
+    
+    // Create ICS content
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+URL:${window.location.href}
+DTSTART:${startTime}
+DTEND:${endTime}
+SUMMARY:${title}
+DESCRIPTION:${desc}
+LOCATION:${loc}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'flight.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Event downloaded to calendar");
+  };
+
+  const handleShare = () => {
+    const text = `Tracking Flight ${flight.flight_number} with NeuraSky.\nStatus: ${flight.status}\nDeparture: ${formatTime(flight.departureTime)}\nTrack live: https://neurasky.click`;
+    navigator.clipboard.writeText(text);
+    toast.success("Flight status copied to clipboard");
+  };
 
   return (
     <Card className="mb-4 group hover:shadow-md transition-all duration-300 border border-border border-t-4 border-t-blue-500 bg-white shadow-sm">
@@ -219,7 +259,42 @@ export function FlightCard({ flight, onDelete, showRemove = true }) {
 
           {/* Actions */}
           {showRemove && (
-            <div className="flex justify-end pt-2 border-t border-border">
+            <div className="flex justify-end pt-2 border-t border-border gap-2">
+                {flight.status === 'Delayed' && (
+                  <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`${api.defaults.baseURL}/flights/${flight.id}/certificate/`, '_blank')}
+                      className="text-blue-600 hover:bg-blue-50 border-blue-200"
+                      title="Download Delay Certificate (Insurance)"
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+                      Certificate
+                  </Button>
+                )}
+
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    onClick={handleAddToCalendar}
+                    title="Add to Calendar"
+                >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Calendar
+                </Button>
+
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    onClick={handleShare}
+                    title="Share Status"
+                >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share
+                </Button>
+
                 <Button
                 variant="ghost"
                 size="sm"

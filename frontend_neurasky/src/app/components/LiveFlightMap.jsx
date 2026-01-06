@@ -41,8 +41,8 @@ const planeIcon = new L.Icon({
 });
 
 export default function LiveFlightMap({ flights: userFlights = [] }) {
-  // Use state to trigger re-renders for animation
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // Demo Mode State
+  const [isDemoMode, setIsDemoMode] = useState(false);
   
   useEffect(() => {
     fixLeafletIcons();
@@ -59,13 +59,41 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
   // For simulation, we will show them even if scheduled today to make it look alive.
   // We will calculate position based on % of time elapsed.
   
-  const mapData = userFlights.map(flight => {
+  const mapData = userFlights.map((flight, index) => {
     const origin = flight.origin || 'KUL';
     const dest = flight.destination || 'SIN';
     
     const startCoords = AIRPORT_COORDS[origin] || AIRPORT_COORDS['KUL'];
     const endCoords = AIRPORT_COORDS[dest] || AIRPORT_COORDS['SIN'];
     
+    // DEMO MODE LOGIC
+    if (isDemoMode) {
+        // Create a staggered animation based on index
+        // Loop duration: 60 seconds
+        const loopDuration = 60000;
+        const now = currentTime.getTime();
+        // Stagger flights so they don't all move in sync
+        const offset = index * (loopDuration / (userFlights.length || 1));
+        const progressRaw = ((now + offset) % loopDuration) / loopDuration;
+        
+        let progress = progressRaw;
+        // Optional: Make them pause at dest for a moment? No, continuous is better for demo.
+        
+        // Linear interpolation
+        const lat = startCoords[0] + (endCoords[0] - startCoords[0]) * progress;
+        const lng = startCoords[1] + (endCoords[1] - startCoords[1]) * progress;
+        
+        return {
+            ...flight,
+            startCoords,
+            endCoords,
+            currentPos: [lat, lng],
+            progress,
+            statusLabel: "Demo Flight",
+            status: "In Air"
+        };
+    }
+
     if (!flight.departureTime || !flight.arrivalTime) {
         // If no times, just place it at origin or default
         return { 
@@ -177,10 +205,36 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
           </React.Fragment>
         ))}
         
-        <div className="leaflet-bottom leaflet-right m-4 z-1000 bg-white/90 p-2 rounded shadow text-xs border border-slate-200">
-           <strong>Flight Simulation Active</strong>
-           <br/>
-           Tracking {userFlights.length} flights
+        <div className="leaflet-bottom leaflet-right m-4 z-1000 flex flex-col gap-2 items-end pointer-events-auto">
+            {/* Demo Toggle */}
+            <div className="bg-white/95 p-3 rounded-lg shadow-lg border border-slate-200 backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-end">
+                        <span className="text-sm font-bold text-slate-800">Simulation Mode</span>
+                        <span className="text-[10px] text-slate-500">Force active flights</span>
+                    </div>
+                    <button 
+                        onClick={() => setIsDemoMode(!isDemoMode)}
+                        className={`
+                            relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
+                            ${isDemoMode ? 'bg-indigo-600' : 'bg-slate-200'}
+                        `}
+                    >
+                        <span
+                            className={`
+                                inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                                ${isDemoMode ? 'translate-x-6' : 'translate-x-1'}
+                            `}
+                        />
+                    </button>
+                </div>
+            </div>
+
+           <div className="bg-white/90 p-2 rounded shadow text-xs border border-slate-200 text-right">
+              <strong>{isDemoMode ? "DEMO ACTIVE" : "LIVE TRACKING"}</strong>
+              <br/>
+              Tracking {userFlights.length} flights
+           </div>
         </div>
       </MapContainer>
     </div>

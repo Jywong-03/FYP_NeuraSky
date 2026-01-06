@@ -12,3 +12,4 @@ cryptography
 requests
 lightgbm
 gunicorn
+reportlab
