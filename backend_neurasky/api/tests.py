@@ -66,3 +66,23 @@ class FlightTrackingTests(TestCase):
         # Ideally it should fail or handle it.
         # For now, let's just assert it accepts it (201) but maybe risk is weird.
         self.assertEqual(response.status_code, 201)
+
+    def test_download_delay_certificate(self):
+        """Test generating delay certificate"""
+        # Create a delayed flight
+        flight = TrackedFlight.objects.create(
+            user=self.user,
+            flight_number='MH123',
+            origin='KUL',
+            destination='PEN',
+            status='Delayed',
+            estimatedDelay=30,
+            date='2023-10-27'
+        )
+        
+        url = f'/flights/{flight.id}/certificate/'
+        response = self.client.get(url)
+        
+        # Should return 200 OK with PDF content type
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')

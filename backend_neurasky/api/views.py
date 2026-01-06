@@ -97,7 +97,7 @@ def download_delay_certificate(request, flight_id):
     
     p.setFillColor(colors.black)
     p.setFont("Helvetica", 12)
-    p.drawString(50, y - 130, f"Reason: {flight.delayReason or 'Operational Factors'}")
+    p.drawString(50, y - 130, f"Reason: {getattr(flight, 'delayReason', 'Operational Factors')}")
 
     # Footer
     p.setFont("Helvetica-Oblique", 10)
