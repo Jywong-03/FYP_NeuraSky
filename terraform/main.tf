@@ -71,12 +71,34 @@ module "compute" {
   db_address  = module.database.db_address
   db_name     = "neurasky_db"
   db_username = var.db_username
-  db_password = var.db_password
-  secret_key  = var.secret_key
+  # Secrets removed, handled via SSM
 
-  # SES Secrets
-  aws_ses_user     = var.aws_ses_user
-  aws_ses_password = var.aws_ses_password
+  # SES Secrets removed, handled via SSM
+}
+
+# SSM Parameters for Secrets
+resource "aws_ssm_parameter" "db_password" {
+  name  = "/${var.project_name}/db_password"
+  type  = "SecureString"
+  value = var.db_password
+}
+
+resource "aws_ssm_parameter" "secret_key" {
+  name  = "/${var.project_name}/secret_key"
+  type  = "SecureString"
+  value = var.secret_key
+}
+
+resource "aws_ssm_parameter" "ses_user" {
+  name  = "/${var.project_name}/ses_user"
+  type  = "SecureString"
+  value = var.aws_ses_user
+}
+
+resource "aws_ssm_parameter" "ses_password" {
+  name  = "/${var.project_name}/ses_password"
+  type  = "SecureString"
+  value = var.aws_ses_password
 }
 
 # 6. Route 53 DNS

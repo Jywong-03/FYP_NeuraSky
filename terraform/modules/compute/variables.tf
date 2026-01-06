@@ -18,12 +18,7 @@ variable "backend_tg_arn" {}
 variable "db_address" {}
 variable "db_name" {}
 variable "db_username" {}
-variable "db_password" {}
-variable "secret_key" {}
 
 variable "alb_dns_name" {}
 
 variable "domain_name" {}
-
-variable "aws_ses_user" {}
-variable "aws_ses_password" {}

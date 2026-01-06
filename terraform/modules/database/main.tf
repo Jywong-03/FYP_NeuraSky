@@ -21,8 +21,13 @@ resource "aws_db_instance" "default" {
   parameter_group_name   = "default.mysql8.0"
   db_subnet_group_name   = aws_db_subnet_group.default.name
   vpc_security_group_ids = [var.db_sg_id]
-  skip_final_snapshot    = true
-  publicly_accessible    = false
+
+  # Reliability & Safety
+  skip_final_snapshot     = true # Set to false and provide identifier for Prod
+  backup_retention_period = 7    # 7 Days Backups
+  storage_encrypted       = true
+
+  publicly_accessible = false
 
   tags = {
     Name    = "${var.vpc_name}-rds"

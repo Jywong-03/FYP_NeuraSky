@@ -20,6 +20,25 @@ resource "aws_iam_role" "ec2_role" {
   }
 }
 
+resource "aws_iam_role_policy" "secrets_access" {
+  name = "${var.project_name}-secrets-access"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters"
+        ]
+        Resource = "arn:aws:ssm:*:*:parameter/${var.project_name}/*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "ssm_core" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -56,17 +75,14 @@ resource "aws_launch_template" "main" {
 
   # Render User Data
   user_data = base64encode(templatefile("${path.module}/user_data.tftpl", {
-    db_host     = var.db_address
-    db_name     = var.db_name
-    db_user     = var.db_username
-    db_password = var.db_password
-    secret_key  = var.secret_key
+    db_host = var.db_address
+    db_name = var.db_name
+    db_user = var.db_username
+    # Secrets removed from here, will be fetched via SSM in user_data script
+    project_name = var.project_name
 
     alb_dns_name = var.alb_dns_name
     domain_name  = var.domain_name
-
-    aws_ses_user     = var.aws_ses_user
-    aws_ses_password = var.aws_ses_password
   }))
 
   tag_specifications {
@@ -82,9 +98,9 @@ resource "aws_launch_template" "main" {
 resource "aws_autoscaling_group" "main" {
   name                = "${var.vpc_name}-asg"
   vpc_zone_identifier = var.private_subnet_ids
-  desired_capacity    = 1
+  desired_capacity    = 2
   max_size            = 2
-  min_size            = 1
+  min_size            = 2
 
   launch_template {
     id      = aws_launch_template.main.id

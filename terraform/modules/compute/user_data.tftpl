@@ -6,11 +6,22 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 echo "Starting User Data Script..."
 
 # 1. Install Docker
-# 1. Install Docker
+# 1. Install Docker & AWS CLI
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
+usermod -aG docker ubuntu
+snap install aws-cli --classic
 
-# 2. Create Docker Compose File
+# 2. Fetch Secrets from SSM
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+echo "Fetching secrets from Region: $REGION"
+
+DB_PASSWORD=$(aws ssm get-parameter --name "/${project_name}/db_password" --region $REGION --with-decryption --query "Parameter.Value" --output text)
+SECRET_KEY=$(aws ssm get-parameter --name "/${project_name}/secret_key" --region $REGION --with-decryption --query "Parameter.Value" --output text)
+SES_USER=$(aws ssm get-parameter --name "/${project_name}/ses_user" --region $REGION --with-decryption --query "Parameter.Value" --output text)
+SES_PASSWORD=$(aws ssm get-parameter --name "/${project_name}/ses_password" --region $REGION --with-decryption --query "Parameter.Value" --output text)
+
+# 3. Create Docker Compose File
 mkdir -p /home/ubuntu/app
 cd /home/ubuntu/app
 
@@ -28,13 +39,13 @@ services:
       - DB_PORT=3306
       - DB_NAME=${db_name}
       - DB_USER=${db_user}
-      - DB_PASSWORD=${db_password}
-      - SECRET_KEY=${secret_key}
+      - DB_PASSWORD=$DB_PASSWORD
+      - SECRET_KEY=$SECRET_KEY
       # AWS SES
       - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
       - AWS_SES_ENDPOINT=email-smtp.ap-southeast-1.amazonaws.com
-      - AWS_SES_USER=${aws_ses_user}
-      - AWS_SES_PASSWORD=${aws_ses_password}
+      - AWS_SES_USER=$SES_USER
+      - AWS_SES_PASSWORD=$SES_PASSWORD
       - DEFAULT_FROM_EMAIL=NeuraSky Support <support@neurasky.click>
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
@@ -54,10 +65,10 @@ services:
       - backend
 EOT
 
-# 3. Start Application
+# 4. Start Application
 docker compose up -d
 
-# 4. Wait loop to ensure services are up (Optional but good for debugging)
+# 5. Wait loop
 echo "Waiting for services to start..."
 sleep 20
 docker compose ps
