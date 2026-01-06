@@ -69,7 +69,7 @@ resource "aws_s3_bucket_public_access_block" "alb_logs" {
 # S3 Bucket for Database Dumps
 resource "aws_s3_bucket" "data" {
   bucket_prefix = "neurasky-data-"
-  force_destroy = true
+  force_destroy = false # Safety: Prevent deleting bucket if it has data
 }
 
 resource "aws_s3_bucket_public_access_block" "data" {
