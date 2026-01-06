@@ -206,16 +206,25 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
           </React.Fragment>
         ))}
         
-        <div className="leaflet-bottom leaflet-right m-4 z-1000 flex flex-col gap-2 items-end pointer-events-auto">
+        <div className="leaflet-bottom leaflet-right m-4 z-[1000] flex flex-col gap-2 items-end pointer-events-auto">
             {/* Demo Toggle */}
-            <div className="bg-white/95 p-3 rounded-lg shadow-lg border border-slate-200 backdrop-blur-sm">
+            <div 
+                className="bg-white/95 p-3 rounded-lg shadow-lg border border-slate-200 backdrop-blur-sm cursor-default"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }}
+            >
                 <div className="flex items-center gap-3">
                     <div className="flex flex-col items-end">
                         <span className="text-sm font-bold text-slate-800">Simulation Mode</span>
                         <span className="text-[10px] text-slate-500">Force active flights</span>
                     </div>
                     <button 
-                        onClick={() => setIsDemoMode(!isDemoMode)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsDemoMode(!isDemoMode);
+                        }}
                         className={`
                             relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
                             ${isDemoMode ? 'bg-indigo-600' : 'bg-slate-200'}

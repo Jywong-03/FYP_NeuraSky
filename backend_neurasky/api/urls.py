@@ -28,6 +28,7 @@ urlpatterns = [
     # Flight management
     path('flights/', views.TrackedFlightView.as_view(), name='tracked-flights'),
     path('flights/<int:pk>/', views.TrackedFlightDetailView.as_view(), name='tracked-flights-detail'),
+    path('flights/<int:flight_id>/certificate/', views.download_delay_certificate, name='download-certificate'),
     path('flight-status/<str:flight_number>/<str:date>/', 
          views.FlightStatusView.as_view(), 
          name='flight-status'),
