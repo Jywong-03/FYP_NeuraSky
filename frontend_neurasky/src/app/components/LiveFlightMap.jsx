@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -45,8 +45,17 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
+  // Ref for the custom control container
+  const mapControlRef = useRef(null);
+  
   useEffect(() => {
     fixLeafletIcons();
+    
+    // Disable click propagation for the control container to prevent map interaction
+    if (mapControlRef.current) {
+        L.DomEvent.disableClickPropagation(mapControlRef.current);
+        L.DomEvent.disableScrollPropagation(mapControlRef.current);
+    }
     
     // Animation loop (update every 1 second)
     const timer = setInterval(() => {
@@ -206,13 +215,13 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
           </React.Fragment>
         ))}
         
-        <div className="leaflet-bottom leaflet-right m-4 z-[1000] flex flex-col gap-2 items-end pointer-events-auto">
+        <div className="leaflet-bottom leaflet-right m-4 z-1000 flex flex-col gap-2 items-end pointer-events-auto">
             {/* Demo Toggle */}
             <div 
+                ref={mapControlRef}
                 className="bg-white/95 p-3 rounded-lg shadow-lg border border-slate-200 backdrop-blur-sm cursor-default"
                 onClick={(e) => {
                     e.stopPropagation();
-                    e.preventDefault();
                 }}
             >
                 <div className="flex items-center gap-3">

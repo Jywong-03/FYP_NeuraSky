@@ -137,6 +137,32 @@ END:VCALENDAR`;
     toast.success("Flight status copied to clipboard");
   };
 
+  const handleDownloadCertificate = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/flights/${flight.id}/certificate/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Delay_Certificate_${flight.flight_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      toast.success("Certificate downloaded");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to download certificate. Please try again.");
+    }
+  };
+
   return (
     <Card className="mb-4 group hover:shadow-md transition-all duration-300 border border-border border-t-4 border-t-blue-500 bg-white shadow-sm">
       <CardContent className="p-5">
@@ -267,7 +293,7 @@ END:VCALENDAR`;
                   <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`${API_BASE_URL}/flights/${flight.id}/certificate/`, '_blank')}
+                      onClick={handleDownloadCertificate}
                       className="text-blue-600 hover:bg-blue-50 border-blue-200"
                       title="Download Delay Certificate (Insurance)"
                   >
