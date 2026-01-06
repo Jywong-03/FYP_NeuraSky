@@ -107,6 +107,21 @@ export function FlightCard({ flight, onDelete, showRemove = true }) {
                   {flight.flight_number?.toUpperCase() || 'N/A'}
                 </span>
                 {getStatusBadge(flight.status)}
+                
+                {/* Risk Badge (New Feature) */}
+                {flight.risk_analysis && (
+                   <div 
+                     className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border shadow-sm transition-all hover:scale-105 cursor-help
+                     ${flight.risk_analysis.risk_level === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 
+                       flight.risk_analysis.risk_level === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                       'bg-blue-50 text-blue-700 border-blue-200'}
+                     `}
+                     title={`Forecast: ${flight.risk_analysis.probability}% chance of delay.\nFactors: ${flight.risk_analysis.is_peak ? 'Peak Hour' : ''} ${flight.risk_analysis.is_international ? 'International' : ''}`}
+                   >
+                     {flight.risk_analysis.risk_level === 'High' && <span className="relative flex h-2 w-2 mr-1"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>}
+                     {flight.risk_analysis.risk_level} Risk
+                   </div>
+                )}
               </div>
               <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
                 <span className="uppercase tracking-widest text-xs">{airlineName}</span>

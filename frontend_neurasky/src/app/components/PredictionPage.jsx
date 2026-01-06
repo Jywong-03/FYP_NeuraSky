@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { CloudRain, Sun, Cloud, AlertTriangle, CheckCircle2, Plane, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Plane, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../config';
 import dynamic from 'next/dynamic';
@@ -71,11 +71,7 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
     }
   };
 
-  const getWeatherIcon = (condition) => {
-    if (condition === 'Thunderstorms' || condition === 'Rain') return <CloudRain className="w-6 h-6 text-blue-400" />;
-    if (condition === 'Clear Sky') return <Sun className="w-6 h-6 text-yellow-400" />;
-    return <Cloud className="w-6 h-6 text-gray-400" />;
-  };
+
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
@@ -344,36 +340,7 @@ export function PredictionPage({ user, onNavigate, onLogout }) {
                     </div>
                   </div>
 
-                  {/* WEATHER WIDGETS */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* ORIGIN WEATHER */}
-                    <Card className="bg-linear-to-br from-blue-500/20 to-blue-600/10 border-blue-200/50 backdrop-blur-md">
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 bg-white rounded-full shadow-sm">
-                          {getWeatherIcon(result.origin_weather.condition)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Origin</p>
-                          <p className="font-bold text-slate-800 text-lg">{result.origin_weather.temp}</p>
-                          <p className="text-sm text-slate-600 font-medium">{result.origin_weather.condition}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
 
-                    {/* DEST WEATHER */}
-                    <Card className="bg-linear-to-br from-cyan-500/20 to-cyan-600/10 border-cyan-200/50 backdrop-blur-md">
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 bg-secondary rounded-full shadow-sm">
-                          {getWeatherIcon(result.dest_weather.condition)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">Destination</p>
-                          <p className="font-bold text-slate-800 text-lg">{result.dest_weather.temp}</p>
-                          <p className="text-sm text-slate-600 font-medium">{result.dest_weather.condition}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
                   
                 </div>
               )}

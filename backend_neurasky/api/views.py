@@ -33,31 +33,67 @@ from .serializers import (
     UserProfileSettingsSerializer, AlertSerializer, MyTokenObtainPairSerializer
 )
 from .models import TrackedFlight, FlightHistory, UserProfile, Alert
+from .ml_utils import (
+    ML_MODEL, DATA_ENCODER, FEATURE_NAMES, TRAINING_METRICS,
+    calculate_flight_risk, get_estimated_distance, is_international_route, 
+    get_time_of_day, is_peak_hour
+)
+from .email_templates import get_delay_alert_template
 
-# --- 1. LOAD THE ENHANCED MALAYSIA MODEL ---
-MODEL_PATH = os.path.join(settings.BASE_DIR, 'api', 'flight_delay_model.joblib')
-ENCODER_PATH = os.path.join(settings.BASE_DIR, 'api', 'flight_data_encoder.joblib')
-FEATURES_PATH = os.path.join(settings.BASE_DIR, 'api', 'model_features.joblib')
-METRICS_PATH = os.path.join(settings.BASE_DIR, 'api', 'training_metrics.joblib')
+# ... (rest of code)
 
-# Load model, encoder, and features when server starts
-try:
-    ML_MODEL = joblib.load(MODEL_PATH)
-    DATA_ENCODER = joblib.load(ENCODER_PATH)
-    FEATURE_NAMES = joblib.load(FEATURES_PATH)
-    TRAINING_METRICS = joblib.load(METRICS_PATH)
-    print(f"✅ Enhanced ML Model loaded successfully")
-    print(f"📊 Model F1-Score: {TRAINING_METRICS.get('f1_score', 0):.4f}")
-    features_len = len(FEATURE_NAMES) if FEATURE_NAMES else 0
-    print(f"📈 Features used: {features_len}")
-except Exception as e:
-    print(f"❌ CRITICAL ERROR: Could not load enhanced model. Error: {e}")
-    ML_MODEL = None
-    DATA_ENCODER = None
-    FEATURE_NAMES = None
-    TRAINING_METRICS = None
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_new_alerts(request):
+    since_id = request.query_params.get('since', 0)
+    user_flights = TrackedFlight.objects.filter(user=request.user)
+    for flight in user_flights:
+        if flight.estimatedDelay and flight.estimatedDelay > 15:
+            # Check if user wants delay alerts
+            if hasattr(request.user, 'profile') and not request.user.profile.delayAlerts:
+                continue
 
-# --- RESTORED VIEWS ---
+            already_alerted = Alert.objects.filter(user=request.user, flightNumber=flight.flight_number, type='delay').exists()
+            if not already_alerted:
+                # Create Alert
+                alert = Alert.objects.create(
+                    user=request.user,
+                    title=f"Flight {flight.flight_number} Delayed",
+                    message=f"Your flight to {flight.destination} is delayed by {flight.estimatedDelay} minutes.",
+                    type='delay',
+                    severity='high',
+                    flightNumber=flight.flight_number
+                )
+                
+                # Send Email if enabled
+                try:
+                    if hasattr(request.user, 'profile') and request.user.profile.emailNotifications:
+                        # Generate HTML Content
+                        html_content = get_delay_alert_template(
+                            username=request.user.username,
+                            flight_number=flight.flight_number,
+                            destination=flight.destination,
+                            delay_minutes=flight.estimatedDelay
+                        )
+                        
+                        send_mail(
+                            subject=f"⚠️ Flight Delay Alert: {flight.flight_number}",
+                            message=f"Flight {flight.flight_number} is delayed by {flight.estimatedDelay} minutes. Please check the dashboard.", # Fallback text
+                            html_message=html_content, # NEW: HTML Version
+                            from_email=None, 
+                            recipient_list=[request.user.email],
+                            fail_silently=False, 
+                        )
+                        print(f"✅ EMAIL SENT: HTML Delay alert for {flight.flight_number} sent to {request.user.email}")
+                    else:
+                        print(f"🚫 EMAIL SKIPPED: User {request.user.username} has disabled email notifications.")
+                except Exception as e:
+                    print(f"❌ EMAIL FAILED: Could not send email to {request.user.email}. Error: {e}")
+
+    alerts = Alert.objects.filter(user=request.user, id__gt=since_id).order_by('-timestamp')
+    serializer = AlertSerializer(alerts, many=True)
+    return Response(serializer.data)
+
 
 class UserProfileSettingsView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSettingsSerializer
@@ -135,9 +171,16 @@ class TrackedFlightView(generics.ListCreateAPIView):
         force_delay = data.get('simulate_delay', False) # Check for boolean flag
         
         # 2. Simulate Route if missing
-        origin = 'KUL' # Default origin
-        possible_dests = [a for a in AIRPORTS if a != origin]
-        destination = random.choice(possible_dests)
+        # Allow user to specify origin/destination if provided, otherwise random
+        origin = data.get('origin', None)
+        destination = data.get('destination', None)
+        
+        if not origin:
+             origin = 'KUL' # Default origin
+             
+        if not destination:
+             possible_dests = [a for a in AIRPORTS if a != origin]
+             destination = random.choice(possible_dests)
         
         # 3. Simulate Schedule
         # If date is not provided, use today. If provided, parse it.
@@ -295,10 +338,65 @@ def user_profile_view(request):
 def flight_stats_view(request):
     user = request.user
     now = timezone.now()
+    
+    # 1. Total Flights & Change from Last Month
     flights_tracked = TrackedFlight.objects.filter(user=user).count()
+    
+    last_month = now - timedelta(days=30)
+    # Assuming 'date' or 'departureTime' indicates when it was added/tracked? 
+    # Actually TrackedFlight doesn't have 'created_at'. We'll use 'departureTime' or 'date' as proxy for "active this month" vs "last month"
+    # Or just mock the "change" if we don't have historical snapshots.
+    # But wait, FlightHistory records things. Let's use TrackedFlight departureTime to see how many were "last month".
+    
+    # Better approach given current models: 
+    # Compare flights with departureTime in current month vs previous month
+    current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
+    
+    flights_this_month = TrackedFlight.objects.filter(user=user, departureTime__gte=current_month_start).count()
+    flights_last_month = TrackedFlight.objects.filter(
+        user=user, 
+        departureTime__gte=last_month_start, 
+        departureTime__lt=current_month_start
+    ).count()
+    
+    flights_change = flights_this_month - flights_last_month
+    flights_change_str = f"+{flights_change}" if flights_change >= 0 else f"{flights_change}"
+
+    # 2. Delay Alerts (Total & New)
     delay_alerts = TrackedFlight.objects.filter(user=user, estimatedDelay__gt=0).count()
-    upcoming_flights = TrackedFlight.objects.filter(user=user, departureTime__gte=now).count()
-    stats_data = {'flightsTracked': flights_tracked, 'delayAlerts': delay_alerts, 'upcomingFlights': upcoming_flights}
+    
+    # "New" alerts = Unread alerts in the Alert model
+    new_alerts_count = Alert.objects.filter(user=user, read=False).count()
+    new_alerts_str = f"+{new_alerts_count}"
+    
+    # 3. Upcoming Flights & Days to Next
+    upcoming_flights_qs = TrackedFlight.objects.filter(user=user, departureTime__gte=now).order_by('departureTime')
+    upcoming_flights_count = upcoming_flights_qs.count()
+    
+    next_flight = upcoming_flights_qs.first()
+    if next_flight and next_flight.departureTime:
+        delta = next_flight.departureTime - now
+        days_to_next = delta.days
+        if days_to_next == 0:
+            next_flight_str = "Today"
+        elif days_to_next == 1:
+            next_flight_str = "Tomorrow"
+        else:
+            next_flight_str = f"in {days_to_next} days"
+    else:
+        next_flight_str = "No upcoming flights"
+
+    stats_data = {
+        'flightsTracked': flights_tracked, 
+        'flightsChange': flights_change_str, # e.g. "+2"
+        
+        'delayAlerts': delay_alerts, 
+        'newAlertsCount': new_alerts_str, # e.g. "+5"
+        
+        'upcomingFlights': upcoming_flights_count,
+        'nextFlightIn': next_flight_str # e.g. "in 3 days"
+    }
     return Response(stats_data)
 
 @api_view(['GET'])
@@ -315,6 +413,10 @@ def get_new_alerts(request):
     user_flights = TrackedFlight.objects.filter(user=request.user)
     for flight in user_flights:
         if flight.estimatedDelay and flight.estimatedDelay > 15:
+            # Check if user wants delay alerts
+            if hasattr(request.user, 'profile') and not request.user.profile.delayAlerts:
+                continue
+
             already_alerted = Alert.objects.filter(user=request.user, flightNumber=flight.flight_number, type='delay').exists()
             if not already_alerted:
                 # Create Alert
@@ -335,11 +437,13 @@ def get_new_alerts(request):
                             message=f"Dear {request.user.username},\n\nYour flight {flight.flight_number} to {flight.destination} is currently delayed by {flight.estimatedDelay} minutes.\n\nPlease check the dashboard for more details.\n\nSafe travels,\nNeuraSky Team",
                             from_email=None, # Uses DEFAULT_FROM_EMAIL
                             recipient_list=[request.user.email],
-                            fail_silently=True,
+                            fail_silently=False, # Changed to False to see errors in logs
                         )
-                        print(f"📧 Email sent to {request.user.email}")
+                        print(f"✅ EMAIL SENT: Delay alert for {flight.flight_number} sent to {request.user.email}")
+                    else:
+                        print(f"🚫 EMAIL SKIPPED: User {request.user.username} has disabled email notifications.")
                 except Exception as e:
-                    print(f"Failed to send email: {e}")
+                    print(f"❌ EMAIL FAILED: Could not send email to {request.user.email}. Error: {e}")
 
     alerts = Alert.objects.filter(user=request.user, id__gt=since_id).order_by('-timestamp')
     serializer = AlertSerializer(alerts, many=True)
@@ -385,42 +489,7 @@ class TrackedFlightDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 # --- 2. ENHANCED PREDICTION LOGIC ---
 
-# Helper to estimate distance
-def get_estimated_distance(origin, dest):
-    distances = {
-        ('KUL', 'PEN'): 325, ('PEN', 'KUL'): 325,
-        ('KUL', 'BKI'): 1630, ('BKI', 'KUL'): 1630,
-        ('KUL', 'KCH'): 975, ('KCH', 'KUL'): 975,
-        ('KUL', 'LGK'): 300, ('LGK', 'KUL'): 300,
-        ('KUL', 'JHB'): 280, ('JHB', 'KUL'): 280,
-        ('KUL', 'AOR'): 650, ('AOR', 'KUL'): 650,
-        ('KUL', 'MYY'): 1150, ('MYY', 'KUL'): 1150,
-        ('PEN', 'BKI'): 1350, ('BKI', 'PEN'): 1350,
-        ('PEN', 'KCH'): 750, ('KCH', 'PEN'): 750,
-        ('KUL', 'SIN'): 296, ('SIN', 'KUL'): 296,
-        ('KUL', 'BKK'): 1220, ('BKK', 'KUL'): 1220,
-        ('KUL', 'HKG'): 2560, ('HKG', 'KUL'): 2560,
-        ('KUL', 'NRT'): 5320, ('NRT', 'KUL'): 5320,
-        ('KUL', 'ICN'): 4620, ('ICN', 'KUL'): 4620,
-        ('KUL', 'LHR'): 10600, ('LHR', 'KUL'): 10600,
-        ('KUL', 'SYD'): 6530, ('SYD', 'KUL'): 6530,
-        ('KUL', 'DXB'): 5550, ('DXB', 'KUL'): 5550,
-        ('KUL', 'DOH'): 5630, ('DOH', 'KUL'): 5630,
-    }
-    return distances.get((origin, dest), 800)
 
-def is_international_route(origin, dest):
-    malaysian_airports = {'KUL', 'PEN', 'BKI', 'KCH', 'LGK', 'JHB', 'AOR', 'MYY', 'SDK', 'TWU'}
-    return (origin not in malaysian_airports) or (dest not in malaysian_airports)
-
-def get_time_of_day(hour):
-    if 0 <= hour < 6: return 'Night'
-    elif 6 <= hour < 12: return 'Morning'
-    elif 12 <= hour < 18: return 'Afternoon'
-    else: return 'Evening'
-
-def is_peak_hour(hour):
-    return hour in [7, 8, 9, 17, 18, 19, 20]
 
 class RouteForecastView(APIView):
     permission_classes = [permissions.IsAuthenticated]

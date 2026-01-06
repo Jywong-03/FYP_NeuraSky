@@ -158,17 +158,6 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-foreground font-medium">Push Notifications</p>
-                      <p className="text-sm text-muted-foreground">Receive alerts on your device</p>
-                    </div>
-                    <Switch
-                      id="push-notifications"
-                      checked={settings.pushNotifications}
-                      onCheckedChange={(newValue) => handleSettingsChange('pushNotifications', newValue)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
                       <p className="text-foreground font-medium">Delay Alerts</p>
                       <p className="text-sm text-muted-foreground">Notify me about flight delays</p>
                     </div>
@@ -176,17 +165,6 @@ export function AccountSettings({ user, onNavigate, onLogout }) {
                       id="delay-alerts"
                       checked={settings.delayAlerts}
                       onCheckedChange={(newValue) => handleSettingsChange('delayAlerts', newValue)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-foreground font-medium">Weekly Digest</p>
-                      <p className="text-sm text-muted-foreground">A summary of your flight activity</p>
-                    </div>
-                    <Switch
-                      id="weekly-digest"
-                      checked={settings.weeklyDigest}
-                      onCheckedChange={(newValue) => handleSettingsChange('weeklyDigest', newValue)}
                     />
                   </div>
                 </CardContent>

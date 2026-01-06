@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -147,7 +147,7 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
         />
         
         {mapData.map((flight) => (
-          <div key={flight.id}>
+          <React.Fragment key={flight.id}>
              {/* Draw line between origin and dest */}
              <Polyline 
                 positions={[flight.startCoords, flight.endCoords]} 
@@ -157,7 +157,7 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
              />
              
              {/* Plane Marker */}
-             <Marker position={flight.currentPos}>
+             <Marker position={flight.currentPos} icon={planeIcon}>
                 <Popup>
                     <div className="text-sm font-sans">
                         <strong className="block text-indigo-700">{flight.flight_number}</strong>
@@ -174,7 +174,7 @@ export default function LiveFlightMap({ flights: userFlights = [] }) {
                     </div>
                 </Popup>
              </Marker>
-          </div>
+          </React.Fragment>
         ))}
         
         <div className="leaflet-bottom leaflet-right m-4 z-1000 bg-white/90 p-2 rounded shadow text-xs border border-slate-200">

@@ -33,7 +33,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
   const [isLoading, setIsLoading] = useState(true);
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 2;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -85,6 +85,13 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
             gate: flight.gate || 'TBD',
             terminal: flight.terminal || 'TBD'
           };
+        });
+
+        // Sort by departure time (newest/future first)
+        flightData.sort((a, b) => {
+          const dateA = new Date(a.departureTime || a.date);
+          const dateB = new Date(b.departureTime || b.date);
+          return dateB - dateA;
         });
 
         setLiveFlights(flightData);
@@ -145,7 +152,7 @@ export function Dashboard({ user, onNavigate, onLogout, authToken }) {
               </p>
             </div>
             <div className="text-right hidden md:block">
-               <p className="text-sm text-blue-100 font-mono opacity-80 decoration-slice">
+               <p className="text-sm text-blue-100 font-mono opacity-80 box-decoration-slice">
                  {currentTime.toLocaleDateString('en-GB', {
                    year: 'numeric',
                    month: '2-digit',

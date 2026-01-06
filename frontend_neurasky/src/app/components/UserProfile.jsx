@@ -92,7 +92,7 @@ const formatMemberSince = (dateString) => {
               <CardContent>
                 <div className="text-3xl font-mono font-bold text-foreground">{travelStats?.flightsTracked || 0}</div>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <span className="text-green-500 font-medium">+2</span> form last month
+                    <span className="text-green-500 font-medium">{travelStats?.flightsChange || 0}</span> from last month
                 </p>
               </CardContent>
             </Card>
@@ -104,7 +104,7 @@ const formatMemberSince = (dateString) => {
               <CardContent>
                 <div className="text-3xl font-mono font-bold text-foreground">{travelStats?.delayAlerts || 0}</div>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <span className="text-red-500 font-medium">+5</span> new alerts
+                    <span className="text-red-500 font-medium">{travelStats?.newAlertsCount || 0}</span> new alerts
                 </p>
               </CardContent>
             </Card>
@@ -115,7 +115,7 @@ const formatMemberSince = (dateString) => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-mono font-bold text-foreground">{travelStats?.upcomingFlights || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Next flight in <span className="text-foreground font-medium">3 days</span></p>
+                <p className="text-xs text-muted-foreground mt-1">Next flight <span className="text-foreground font-medium">{travelStats?.nextFlightIn || 'N/A'}</span></p>
               </CardContent>
             </Card>
           </div>

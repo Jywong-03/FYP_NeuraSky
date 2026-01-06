@@ -55,7 +55,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 # In api/serializers.py
 
+from .ml_utils import calculate_flight_risk
+
 class TrackedFlightSerializer(serializers.ModelSerializer):
+    risk_analysis = serializers.SerializerMethodField()
+    
     class Meta:
         model = TrackedFlight
         
@@ -74,13 +78,26 @@ class TrackedFlightSerializer(serializers.ModelSerializer):
             'terminal',
             'baggage_claim',
             'aircraft_type',
-            'airline'
+            'airline',
+            'risk_analysis'
         )
         
         # --- THIS IS THE FIX ---
         # We must also mark 'origin' and 'destination' as read-only,
         # just like the other fields populated by the server.
         read_only_fields = ('origin', 'destination', 'status', 'estimatedDelay', 'departureTime', 'arrivalTime', 'gate', 'terminal', 'baggage_claim', 'aircraft_type', 'airline')
+
+    def get_risk_analysis(self, obj):
+        # Safe access to fields
+        if not obj.origin or not obj.destination:
+            return None
+            
+        return calculate_flight_risk(
+            origin=obj.origin,
+            destination=obj.destination,
+            departure_time=obj.departureTime,
+            airline=obj.airline
+        )
 
 class AlertSerializer(serializers.ModelSerializer):
     class Meta:
