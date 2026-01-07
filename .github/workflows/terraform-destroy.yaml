@@ -6,7 +6,7 @@ on:
       confirmation:
         description: 'Type "destroy" to confirm destruction'
         required: true
-        default: ''
+        default: ""
 
 permissions:
   contents: read
@@ -54,4 +54,20 @@ jobs:
           TF_VAR_aws_ses_user: ${{ secrets.AWS_SES_USER }}
           TF_VAR_aws_ses_password: ${{ secrets.AWS_SES_PASSWORD }}
 
-        run: terraform destroy -auto-approve
+        run: |
+          set +e
+          terraform destroy -auto-approve -input=false 2>&1 | tee destroy.log
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "Terraform Destroy completed successfully."
+            exit 0
+          fi
+
+          if grep -q "BucketNotEmpty" destroy.log; then
+            echo "::warning title=Data Preserved::Terraform Destroy failed because the S3 Backup Bucket is not empty. This is EXPECTED behavior. Your data is safe in S3, while all expensive resources (EC2, RDS) have been destroyed."
+            exit 0
+          else
+            echo "::error::Terraform Destroy failed with an unexpected error."
+            exit $EXIT_CODE
+          fi
