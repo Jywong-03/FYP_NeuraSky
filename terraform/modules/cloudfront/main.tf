@@ -3,6 +3,7 @@ variable "alb_dns_name" {}
 variable "domain_name" {
   description = "The main domain name (e.g., example.com)"
 }
+variable "acm_certificate_arn" {}
 
 resource "aws_cloudfront_distribution" "main" {
   origin {
@@ -21,8 +22,8 @@ resource "aws_cloudfront_distribution" "main" {
   is_ipv6_enabled = true
   comment         = "CloudFront for ${var.project_name}"
 
-  # Aliases (CNAMEs) - Optional, requires valid ACM cert in us-east-1
-  # aliases = [var.domain_name] 
+  # Aliases (CNAMEs) - Essential for custom domain access
+  aliases = [var.domain_name]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -53,9 +54,10 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
-    # acm_certificate_arn = var.acm_certificate_arn # Requires us-east-1 cert
-    # ssl_support_method  = "sni-only"
+    cloudfront_default_certificate = false
+    acm_certificate_arn            = var.acm_certificate_arn
+    ssl_support_method             = "sni-only"
+    minimum_protocol_version       = "TLSv1.2_2021"
   }
 
   tags = {

@@ -187,10 +187,11 @@ resource "aws_ssm_parameter" "ses_password" {
 
 # 9. CloudFront (Free Tier CDN)
 module "cloudfront" {
-  source       = "./modules/cloudfront"
-  project_name = var.project_name
-  alb_dns_name = module.loadbalancer.alb_dns_name
-  domain_name  = var.domain_name
+  source              = "./modules/cloudfront"
+  project_name        = var.project_name
+  alb_dns_name        = module.loadbalancer.alb_dns_name
+  domain_name         = var.domain_name
+  acm_certificate_arn = aws_acm_certificate_validation.cloudfront.certificate_arn
 }
 
 # 10. AWS Budget (Cost Control)
@@ -217,7 +218,21 @@ resource "aws_route53_record" "www" {
   }
 }
 
-# 7. ACM Certificate & Validation
+# Provider for Global Resources (CloudFront Certs must be in us-east-1)
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = "Production"
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+# 7. ACM Certificate & Validation (Regional - for ALB)
 resource "aws_acm_certificate" "main" {
   domain_name       = var.domain_name
   validation_method = "DNS"
@@ -243,6 +258,37 @@ resource "aws_route53_record" "cert_validation" {
 resource "aws_acm_certificate_validation" "main" {
   certificate_arn         = aws_acm_certificate.main.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+# 7b. ACM Certificate (Global/us-east-1 - for CloudFront)
+resource "aws_acm_certificate" "cloudfront" {
+  provider          = aws.us_east_1
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "cloudfront_cert_validation" {
+  provider = aws.us_east_1
+  for_each = {
+    for dvo in aws_acm_certificate.cloudfront.domain_validation_options : dvo.domain_name => dvo
+  }
+
+  allow_overwrite = true
+  name            = each.value.resource_record_name
+  records         = [each.value.resource_record_value]
+  ttl             = 60
+  type            = each.value.resource_record_type
+  zone_id         = data.aws_route53_zone.main.zone_id
+}
+
+resource "aws_acm_certificate_validation" "cloudfront" {
+  provider                = aws.us_east_1
+  certificate_arn         = aws_acm_certificate.cloudfront.arn
+  validation_record_fqdns = [for record in aws_route53_record.cloudfront_cert_validation : record.fqdn]
 }
 
 # 11. CloudWatch Dashboard (Overview)
