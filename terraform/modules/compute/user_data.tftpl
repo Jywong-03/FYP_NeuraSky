@@ -13,13 +13,24 @@ usermod -aG docker ubuntu
 snap install aws-cli --classic
 
 # 2. Fetch Secrets from SSM
-REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+# 2. Fetch Secrets from SSM
+# Use token for IMDSv2
+TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+REGION=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/region)
 echo "Fetching secrets from Region: $REGION"
 
-DB_PASSWORD=$(aws ssm get-parameter --name "/${project_name}/db_password" --region $REGION --with-decryption --query "Parameter.Value" --output text)
-SECRET_KEY=$(aws ssm get-parameter --name "/${project_name}/secret_key" --region $REGION --with-decryption --query "Parameter.Value" --output text)
-SES_USER=$(aws ssm get-parameter --name "/${project_name}/ses_user" --region $REGION --with-decryption --query "Parameter.Value" --output text)
-SES_PASSWORD=$(aws ssm get-parameter --name "/${project_name}/ses_password" --region $REGION --with-decryption --query "Parameter.Value" --output text)
+# Explicitly export region for aws cli
+export AWS_DEFAULT_REGION=$REGION
+
+DB_PASSWORD=$(aws ssm get-parameter --name "/${project_name}/db_password" --with-decryption --query "Parameter.Value" --output text)
+SECRET_KEY=$(aws ssm get-parameter --name "/${project_name}/secret_key" --with-decryption --query "Parameter.Value" --output text)
+SES_USER=$(aws ssm get-parameter --name "/${project_name}/ses_user" --with-decryption --query "Parameter.Value" --output text)
+SES_PASSWORD=$(aws ssm get-parameter --name "/${project_name}/ses_password" --with-decryption --query "Parameter.Value" --output text)
+
+# Verify we got the password (don't log it, just check length)
+if [ -z "$DB_PASSWORD" ]; then
+  echo "CRITICAL ERROR: Failed to fetch DB_PASSWORD from SSM."
+fi
 
 # 3. Create Docker Compose File
 mkdir -p /home/ubuntu/app
@@ -72,13 +83,14 @@ apt-get update && apt-get install mariadb-client -y
 
 # Wait for DB to be reachable
 echo "Waiting for DB at ${db_host}..."
-until mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD -e "SELECT 1"; do
+# Use -p"$DB_PASSWORD" (no space) to pass password securely
+until mysql -h ${db_host} -u ${db_user} -p"$DB_PASSWORD" -e "SELECT 1"; do
   echo "Database not ready, retrying..."
   sleep 5
 done
 
 # Check if tables exist
-TABLE_COUNT=$(mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${db_name}';")
+TABLE_COUNT=$(mysql -h ${db_host} -u ${db_user} -p"$DB_PASSWORD" ${db_name} -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${db_name}';")
 
 if [ "$TABLE_COUNT" -eq "0" ]; then
   echo "Database is empty. Attempting to seed..."
@@ -91,7 +103,7 @@ if [ "$TABLE_COUNT" -eq "0" ]; then
   
   if [ -f "neuraskyDB.sql" ]; then
       echo "Importing dump..."
-      mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} < neuraskyDB.sql
+      mysql -h ${db_host} -u ${db_user} -p"$DB_PASSWORD" ${db_name} < neuraskyDB.sql
       echo "Database seeded successfully!"
   else
       echo "No neuraskyDB.sql found in bucket. Skipping import."
