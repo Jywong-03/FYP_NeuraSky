@@ -103,7 +103,7 @@ resource "aws_launch_template" "main" {
     domain_name  = var.domain_name
 
     # Data Bucket for Seeding
-    data_bucket_prefix = "neurasky-data-"
+    data_bucket_name = var.data_bucket_name
   }))
 
   tag_specifications {

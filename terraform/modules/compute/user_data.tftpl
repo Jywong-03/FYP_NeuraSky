@@ -83,22 +83,18 @@ TABLE_COUNT=$(mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} -N -e 
 if [ "$TABLE_COUNT" -eq "0" ]; then
   echo "Database is empty. Attempting to seed..."
   
-  # Find the bucket (since we used prefix, we list to find exact name)
-  DATA_BUCKET=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, '${data_bucket_prefix}')].Name" --output text | head -n 1)
+  # Use exact bucket name passed from Terraform
+  DATA_BUCKET="${data_bucket_name}"
   
-  if [ -n "$DATA_BUCKET" ] && [ "$DATA_BUCKET" != "None" ]; then
-      echo "Found bucket: $DATA_BUCKET. Downloading dump..."
-      aws s3 cp s3://$DATA_BUCKET/neuraskyDB.sql neuraskyDB.sql
-      
-      if [ -f "neuraskyDB.sql" ]; then
-          echo "Importing dump..."
-          mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} < neuraskyDB.sql
-          echo "Database seeded successfully!"
-      else
-          echo "No neuraskyDB.sql found in bucket."
-      fi
+  echo "Downloading dump from $DATA_BUCKET..."
+  aws s3 cp s3://$DATA_BUCKET/neuraskyDB.sql neuraskyDB.sql
+  
+  if [ -f "neuraskyDB.sql" ]; then
+      echo "Importing dump..."
+      mysql -h ${db_host} -u ${db_user} -p$DB_PASSWORD ${db_name} < neuraskyDB.sql
+      echo "Database seeded successfully!"
   else
-      echo "No data bucket found matching prefix."
+      echo "No neuraskyDB.sql found in bucket. Skipping import."
   fi
 else
   echo "Database already contains $TABLE_COUNT tables. Skipping seeding."

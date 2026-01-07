@@ -141,6 +141,9 @@ module "compute" {
   db_address  = module.database.db_address
   db_name     = "neurasky_db"
   db_username = var.db_username
+
+  data_bucket_name = aws_s3_bucket.data.bucket
+
   # Secrets removed, handled via SSM
 
   # SES Secrets removed, handled via SSM
