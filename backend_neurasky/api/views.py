@@ -191,7 +191,7 @@ class TrackedFlightView(generics.ListCreateAPIView):
 
         # RESET ALERTS for this flight (Demo/Re-tracking Logic)
         # If the user tracks the same flight again, they likely want fresh alerts.
-        Alert.objects.filter(user=user, flightNumber=flight_number).delete()
+        # Alert.objects.filter(user=user, flightNumber=flight_number).delete()
         
         # 2. Simulate Route if missing
         # Allow user to specify origin/destination if provided, otherwise random
@@ -440,13 +440,13 @@ def get_new_alerts(request):
             if hasattr(request.user, 'profile') and not request.user.profile.delayAlerts:
                 continue
 
-            # Check for recent alerts (last 24 hours) to allow re-alerting on new days/demos
-            time_threshold = timezone.now() - timedelta(hours=24)
+            # Reverting time check for now
+            # time_threshold = timezone.now() - timedelta(hours=24)
             already_alerted = Alert.objects.filter(
                 user=request.user, 
                 flightNumber=flight.flight_number, 
                 type='delay',
-                timestamp__gte=time_threshold
+                # timestamp__gte=time_threshold
             ).exists()
 
             if not already_alerted:
