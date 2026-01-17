@@ -111,57 +111,7 @@ def download_delay_certificate(request, flight_id):
 
 # ... (rest of code)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_new_alerts(request):
-    since_id = request.query_params.get('since', 0)
-    user_flights = TrackedFlight.objects.filter(user=request.user)
-    for flight in user_flights:
-        if flight.estimatedDelay and flight.estimatedDelay > 15:
-            # Check if user wants delay alerts
-            if hasattr(request.user, 'profile') and not request.user.profile.delayAlerts:
-                continue
 
-            already_alerted = Alert.objects.filter(user=request.user, flightNumber=flight.flight_number, type='delay').exists()
-            if not already_alerted:
-                # Create Alert
-                alert = Alert.objects.create(
-                    user=request.user,
-                    title=f"Flight {flight.flight_number} Delayed",
-                    message=f"Your flight to {flight.destination} is delayed by {flight.estimatedDelay} minutes.",
-                    type='delay',
-                    severity='high',
-                    flightNumber=flight.flight_number
-                )
-                
-                # Send Email if enabled
-                try:
-                    if hasattr(request.user, 'profile') and request.user.profile.emailNotifications:
-                        # Generate HTML Content
-                        html_content = get_delay_alert_template(
-                            username=request.user.username,
-                            flight_number=flight.flight_number,
-                            destination=flight.destination,
-                            delay_minutes=flight.estimatedDelay
-                        )
-                        
-                        send_mail(
-                            subject=f"⚠️ Flight Delay Alert: {flight.flight_number}",
-                            message=f"Flight {flight.flight_number} is delayed by {flight.estimatedDelay} minutes. Please check the dashboard.", # Fallback text
-                            html_message=html_content, # NEW: HTML Version
-                            from_email=None, 
-                            recipient_list=[request.user.email],
-                            fail_silently=False, 
-                        )
-                        print(f"✅ EMAIL SENT: HTML Delay alert for {flight.flight_number} sent to {request.user.email}")
-                    else:
-                        print(f"🚫 EMAIL SKIPPED: User {request.user.username} has disabled email notifications.")
-                except Exception as e:
-                    print(f"❌ EMAIL FAILED: Could not send email to {request.user.email}. Error: {e}")
-
-    alerts = Alert.objects.filter(user=request.user, id__gt=since_id).order_by('-timestamp')
-    serializer = AlertSerializer(alerts, many=True)
-    return Response(serializer.data)
 
 
 class UserProfileSettingsView(generics.RetrieveUpdateAPIView):
@@ -238,6 +188,10 @@ class TrackedFlightView(generics.ListCreateAPIView):
         # 1. Basic Info
         flight_number = data.get('flight_number', 'MH123').upper()
         force_delay = data.get('simulate_delay', False) # Check for boolean flag
+
+        # RESET ALERTS for this flight (Demo/Re-tracking Logic)
+        # If the user tracks the same flight again, they likely want fresh alerts.
+        Alert.objects.filter(user=user, flightNumber=flight_number).delete()
         
         # 2. Simulate Route if missing
         # Allow user to specify origin/destination if provided, otherwise random
@@ -486,7 +440,15 @@ def get_new_alerts(request):
             if hasattr(request.user, 'profile') and not request.user.profile.delayAlerts:
                 continue
 
-            already_alerted = Alert.objects.filter(user=request.user, flightNumber=flight.flight_number, type='delay').exists()
+            # Check for recent alerts (last 24 hours) to allow re-alerting on new days/demos
+            time_threshold = timezone.now() - timedelta(hours=24)
+            already_alerted = Alert.objects.filter(
+                user=request.user, 
+                flightNumber=flight.flight_number, 
+                type='delay',
+                timestamp__gte=time_threshold
+            ).exists()
+
             if not already_alerted:
                 # Create Alert
                 alert = Alert.objects.create(
@@ -501,12 +463,21 @@ def get_new_alerts(request):
                 # Send Email if enabled
                 try:
                     if hasattr(request.user, 'profile') and request.user.profile.emailNotifications:
+                        # Generate HTML Content
+                        html_content = get_delay_alert_template(
+                            username=request.user.username,
+                            flight_number=flight.flight_number,
+                            destination=flight.destination,
+                            delay_minutes=flight.estimatedDelay
+                        )
+
                         send_mail(
                             subject=f"⚠️ Flight Delay Alert: {flight.flight_number}",
                             message=f"Dear {request.user.username},\n\nYour flight {flight.flight_number} to {flight.destination} is currently delayed by {flight.estimatedDelay} minutes.\n\nPlease check the dashboard for more details.\n\nSafe travels,\nNeuraSky Team",
+                            html_message=html_content, # Restore HTML Template
                             from_email=None, # Uses DEFAULT_FROM_EMAIL
                             recipient_list=[request.user.email],
-                            fail_silently=False, # Changed to False to see errors in logs
+                            fail_silently=False, 
                         )
                         print(f"✅ EMAIL SENT: Delay alert for {flight.flight_number} sent to {request.user.email}")
                     else:
