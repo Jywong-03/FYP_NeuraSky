@@ -1,3 +1,5 @@
+from datetime import datetime
+
 def get_delay_alert_template(username, flight_number, destination, delay_minutes, dashboard_url="https://neurasky.click/dashboard"):
     """
     Returns a formatted HTML email string for flight delay alerts.
