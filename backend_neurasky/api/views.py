@@ -197,7 +197,7 @@ class TrackedFlightView(generics.ListCreateAPIView):
         
         # DEBUG LOGGING
         with open("email_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"\n[{datetime.now()}] TrackedFlight created: {flight_number}. Deleted {del_count} old alerts.\n")
+            f.write(f"\n[{timezone.now()}] TrackedFlight created: {flight_number}. Deleted {del_count} old alerts.\n")
 
         # 2. Simulate Route if missing
         # Allow user to specify origin/destination if provided, otherwise random
@@ -440,7 +440,7 @@ def get_all_alerts(request):
 def get_new_alerts(request):
     # DEBUG LOGGING
     with open("email_debug.log", "a", encoding="utf-8") as f:
-         f.write(f"\n[{datetime.now()}] get_new_alerts called for {request.user.username}\n")
+         f.write(f"\n[{timezone.now()}] get_new_alerts called for {request.user.username}\n")
 
     since_id = request.query_params.get('since', 0)
     user_flights = TrackedFlight.objects.filter(user=request.user)
@@ -476,9 +476,9 @@ def get_new_alerts(request):
                 
                 # Send Email if enabled
                 try:
-                    # DEBUG LOGGING
+                    # DEBUG LOGGING (Fixed)
                     with open("email_debug.log", "a", encoding="utf-8") as f:
-                        f.write(f"\n[{datetime.now()}] Attempting to send email to {request.user.email} for flight {flight.flight_number}\n")
+                        f.write(f"\n[{timezone.now()}] Attempting to send email to {request.user.email} for flight {flight.flight_number}\n")
                         if hasattr(request.user, 'profile'):
                             f.write(f"   - Profile found. Notifications enabled: {request.user.profile.emailNotifications}\n")
                         else:
