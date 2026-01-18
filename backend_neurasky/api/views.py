@@ -193,11 +193,7 @@ class TrackedFlightView(generics.ListCreateAPIView):
         # If the user tracks the same flight again, they likely want fresh alerts.
         # RESET ALERTS for this flight (Demo/Re-tracking Logic)
         # If the user tracks the same flight again, they likely want fresh alerts.
-        del_count, _ = Alert.objects.filter(user=user, flightNumber=flight_number).delete()
-        
-        # DEBUG LOGGING
-        with open("email_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"\n[{timezone.now()}] TrackedFlight created: {flight_number}. Deleted {del_count} old alerts.\n")
+        Alert.objects.filter(user=user, flightNumber=flight_number).delete()
 
         # 2. Simulate Route if missing
         # Allow user to specify origin/destination if provided, otherwise random
@@ -438,15 +434,9 @@ def get_all_alerts(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_new_alerts(request):
-    # DEBUG LOGGING
-    with open("email_debug.log", "a", encoding="utf-8") as f:
-         f.write(f"\n[{timezone.now()}] get_new_alerts called for {request.user.username}\n")
 
     since_id = request.query_params.get('since', 0)
     user_flights = TrackedFlight.objects.filter(user=request.user)
-    
-    with open("email_debug.log", "a", encoding="utf-8") as f:
-         f.write(f"   - Found {user_flights.count()} tracked flights.\n")
 
     for flight in user_flights:
         if flight.estimatedDelay and flight.estimatedDelay > 15:
@@ -476,14 +466,6 @@ def get_new_alerts(request):
                 
                 # Send Email if enabled
                 try:
-                    # DEBUG LOGGING (Fixed)
-                    with open("email_debug.log", "a", encoding="utf-8") as f:
-                        f.write(f"\n[{timezone.now()}] Attempting to send email to {request.user.email} for flight {flight.flight_number}\n")
-                        if hasattr(request.user, 'profile'):
-                            f.write(f"   - Profile found. Notifications enabled: {request.user.profile.emailNotifications}\n")
-                        else:
-                            f.write("   - No profile found.\n")
-
                     if hasattr(request.user, 'profile') and request.user.profile.emailNotifications:
                         # Generate HTML Content
                         html_content = get_delay_alert_template(
@@ -502,16 +484,10 @@ def get_new_alerts(request):
                             fail_silently=False, 
                         )
                         print(f"✅ EMAIL SENT: Delay alert for {flight.flight_number} sent to {request.user.email}")
-                        with open("email_debug.log", "a", encoding="utf-8") as f:
-                            f.write(f"   - ✅ SUCCESS: Email sent to {request.user.email}\n")
                     else:
                         print(f"🚫 EMAIL SKIPPED: User {request.user.username} has disabled email notifications.")
-                        with open("email_debug.log", "a", encoding="utf-8") as f:
-                            f.write(f"   - 🚫 SKIPPED: Notifications disabled.\n")
                 except Exception as e:
                     print(f"❌ EMAIL FAILED: Could not send email to {request.user.email}. Error: {e}")
-                    with open("email_debug.log", "a", encoding="utf-8") as f:
-                        f.write(f"   - ❌ FAILED: {str(e)}\n")
 
     alerts = Alert.objects.filter(user=request.user, id__gt=since_id).order_by('-timestamp')
     serializer = AlertSerializer(alerts, many=True)
